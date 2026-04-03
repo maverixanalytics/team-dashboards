@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fellow Pipeline Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1724; color: #e0e6ed; overflow: hidden; height: 100vh; }
+
+  /* ── TOP BAR ── */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #1a2332; border-bottom: 1px solid #2a3a4e; height: 56px; z-index: 1000; position: relative; }
+  .topbar h1 { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+  .topbar h1 span { color: #4da6ff; }
+  .kpi-strip { display: flex; gap: 24px; }
+  .kpi { text-align: center; }
+  .kpi-val { font-size: 22px; font-weight: 700; color: #4da6ff; }
+  .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a8a9e; margin-top: 2px; }
+
+  /* ── LAYOUT ── */
+  .main { display: flex; height: calc(100vh - 56px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { width: 340px; min-width: 340px; background: #1a2332; border-right: 1px solid #2a3a4e; display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-tabs { display: flex; border-bottom: 1px solid #2a3a4e; }
+  .sidebar-tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; cursor: pointer; color: #7a8a9e; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .sidebar-tab.active { color: #4da6ff; border-bottom-color: #4da6ff; background: rgba(77,166,255,0.05); }
+  .sidebar-tab:hover:not(.active) { color: #b0bec5; }
+  .filter-bar { padding: 10px 14px; border-bottom: 1px solid #2a3a4e; }
+  .filter-bar input, .filter-bar select { width: 100%; padding: 8px 12px; background: #0f1724; border: 1px solid #2a3a4e; border-radius: 6px; color: #e0e6ed; font-size: 13px; margin-bottom: 6px; outline: none; }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: #4da6ff; }
+  .filter-row { display: flex; gap: 6px; }
+  .filter-row select { flex: 1; }
+  .sidebar-content { flex: 1; overflow-y: auto; padding: 8px; }
+  .sidebar-content::-webkit-scrollbar { width: 6px; }
+  .sidebar-content::-webkit-scrollbar-thumb { background: #2a3a4e; border-radius: 3px; }
+
+  /* ── FELLOW CARD ── */
+  .fellow-card { background: #0f1724; border: 1px solid #2a3a4e; border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+  .fellow-card:hover, .fellow-card.active { border-color: #4da6ff; background: rgba(77,166,255,0.05); }
+  .fellow-card .name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .fellow-card .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 6px; }
+  .badge-ip { background: rgba(77,166,255,0.15); color: #4da6ff; }
+  .badge-gi { background: rgba(129,199,132,0.15); color: #81c784; }
+  .fellow-card .route { font-size: 12px; color: #7a8a9e; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+  .fellow-card .route .arrow { color: #4da6ff; font-weight: bold; }
+  .fellow-card .wishlist-tag { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 10px; font-size: 10px; background: rgba(255,183,77,0.15); color: #ffb74d; }
+  .fellow-card .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-not-started { background: #78909c; }
+  .status-contacted { background: #4da6ff; }
+  .status-meeting { background: #ffb74d; }
+  .status-wishlist { background: #ab47bc; }
+  .status-quoted { background: #ff7043; }
+  .status-won { background: #66bb6a; }
+
+  /* ── TERRITORY CARD ── */
+  .territory-card { background: #0f1724; border: 1px solid #2a3a4e; border-radius: 8px; padding: 14px; margin-bottom: 8px; }
+  .territory-card .rep-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+  .territory-card .rep-region { font-size: 11px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .territory-card .territory-stats { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2a3a4e; }
+  .territory-stat { text-align: center; }
+  .territory-stat .val { font-size: 18px; font-weight: 700; color: #4da6ff; }
+  .territory-stat .lbl { font-size: 9px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .territory-fellows { margin-top: 10px; }
+  .territory-fellow-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-top: 1px solid #1a2332; font-size: 12px; cursor: pointer; }
+  .territory-fellow-row:hover { color: #4da6ff; }
+  .territory-fellow-row .dest { color: #7a8a9e; font-size: 11px; }
+
+  /* ── MAP AREA ── */
+  .map-wrap { flex: 1; position: relative; }
+  #map { height: 100%; width: 100%; background: #0f1724; }
+  .leaflet-tile-pane { filter: saturate(0.2) brightness(0.45) contrast(1.1); }
+  .leaflet-container { background: #0a0f1a; }
+  .state-label { font-size: 10px; font-weight: 600; color: rgba(180,200,220,0.45); letter-spacing: 1px; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: none; }
+
+  /* ── INFO PANEL (floating over map) ── */
+  .info-panel { position: absolute; top: 16px; right: 16px; width: 360px; max-height: calc(100% - 32px); background: #1a2332; border: 1px solid #2a3a4e; border-radius: 12px; z-index: 800; overflow-y: auto; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+  .info-panel.visible { display: block; }
+  .info-panel-header { padding: 16px; border-bottom: 1px solid #2a3a4e; display: flex; justify-content: space-between; align-items: flex-start; }
+  .info-panel-header h2 { font-size: 18px; color: #fff; }
+  .info-panel-close { background: none; border: none; color: #7a8a9e; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+  .info-panel-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .info-section { padding: 14px 16px; border-bottom: 1px solid #2a3a4e; }
+  .info-section:last-child { border-bottom: none; }
+  .info-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #7a8a9e; margin-bottom: 8px; }
+  .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+  .info-row .label { color: #7a8a9e; }
+  .info-row .value { color: #e0e6ed; font-weight: 500; text-align: right; max-width: 60%; }
+  .info-wishlist { background: #0f1724; border-radius: 6px; padding: 10px; font-size: 13px; line-height: 1.5; color: #e0e6ed; }
+  .info-status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .info-notes-box { background: #0f1724; border: 1px solid #2a3a4e; border-left: 3px solid #4da6ff; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.6; color: #e0e6ed; white-space: pre-wrap; }
+  .notes-from { font-size: 11px; color: #4da6ff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── MAP LEGEND ── */
+  .map-legend { position: absolute; bottom: 24px; left: 16px; background: rgba(26,35,50,0.95); border: 1px solid #2a3a4e; border-radius: 8px; padding: 12px 16px; z-index: 800; font-size: 11px; }
+  .legend-title { font-weight: 700; color: #fff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: #b0bec5; }
+  .legend-line { width: 24px; height: 3px; border-radius: 2px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes arcDraw { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+  @keyframes pulse { 0%,100% { r: 5; opacity: 0.8; } 50% { r: 8; opacity: 0.4; } }
+  @keyframes tbdPulse { 0%,100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.6); opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>FELLOW <span>PIPELINE</span> DASHBOARD</h1>
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-val" id="kpi-total">-</div><div class="kpi-label">Total Fellows</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-ip">-</div><div class="kpi-label">IP Fellows</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-gi">-</div><div class="kpi-label">Adv GI</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-placed">-</div><div class="kpi-label">Placed</div></div>
+    <div class="kpi"><div class="kpi-val" id="kpi-wishlists">-</div><div class="kpi-label">Wish Lists</div></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active" data-tab="fellows">Fellows</div>
+      <div class="sidebar-tab" data-tab="territories">By Territory</div>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="search" placeholder="Search fellows, hospitals, reps...">
+      <div class="filter-row">
+        <select id="filter-type"><option value="">All Types</option><option value="IP Fellow">IP Fellow</option><option value="Advanced GI Fellow">Adv GI Fellow</option></select>
+        <select id="filter-status"><option value="">All Statuses</option><option value="Not Started">Not Started</option><option value="Contacted">Contacted</option><option value="Meeting Scheduled">Meeting Set</option><option value="Wish List Received">Wish List</option><option value="Quoted">Quoted</option><option value="Won">Won</option></select>
+      </div>
+    </div>
+    <div class="sidebar-content" id="sidebar-content"></div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-title">Fellow Routes</div>
+      <div class="legend-item">
+        <svg width="62" height="18"><circle cx="8" cy="9" r="5" fill="none" stroke="#4da6ff" stroke-width="2"/><line x1="16" y1="9" x2="38" y2="9" stroke="#4da6ff" stroke-width="2"/><polygon points="38,5 46,9 38,13" fill="#4da6ff"/><svg x="48" y="0" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C3.1 0 0 3.1 0 7c0 5 7 11 7 11s7-6 7-11c0-3.9-3.1-7-7-7z" fill="#4da6ff" stroke="#fff" stroke-width="1"/><circle cx="7" cy="7" r="2.5" fill="#fff"/></svg></svg>
+        IP Fellow
+      </div>
+      <div class="legend-item">
+        <svg width="62" height="18"><circle cx="8" cy="9" r="5" fill="none" stroke="#81c784" stroke-width="2"/><line x1="16" y1="9" x2="38" y2="9" stroke="#81c784" stroke-width="2"/><polygon points="38,5 46,9 38,13" fill="#81c784"/><svg x="48" y="0" width="14" height="18" viewBox="0 0 14 18"><path d="M7 0C3.1 0 0 3.1 0 7c0 5 7 11 7 11s7-6 7-11c0-3.9-3.1-7-7-7z" fill="#81c784" stroke="#fff" stroke-width="1"/><circle cx="7" cy="7" r="2.5" fill="#fff"/></svg></svg>
+        Advanced GI
+      </div>
+      <div class="legend-item">
+        <svg width="62" height="18"><circle cx="8" cy="9" r="6" fill="#ffb74d" stroke="#fff" stroke-width="1.5"/><circle cx="8" cy="9" r="9" fill="none" stroke="#ffb74d" stroke-width="1" opacity="0.4"/></svg>
+        Destination TBD
+      </div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #2a3a4e;font-size:10px;color:#7a8a9e;">
+        <span style="display:inline-block;width:10px;height:10px;border:2px solid #8aa;border-radius:50%;margin-right:4px;vertical-align:middle;"></span> Training &nbsp;&nbsp;
+        <svg width="10" height="14" viewBox="0 0 14 18" style="vertical-align:middle;margin-right:4px;"><path d="M7 0C3.1 0 0 3.1 0 7c0 5 7 11 7 11s7-6 7-11c0-3.9-3.1-7-7-7z" fill="#8aa" stroke="#fff" stroke-width="1"/><circle cx="7" cy="7" r="2.5" fill="#fff"/></svg> Destination
+      </div>
+    </div>
+    <div class="info-panel" id="info-panel">
+      <div class="info-panel-header">
+        <div><h2 id="info-name"></h2><div id="info-badges" style="margin-top:6px;"></div></div>
+        <button class="info-panel-close" onclick="closeInfoPanel()">&times;</button>
+      </div>
+      <div id="info-body"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIG — Published Google Sheet CSV URL
+// This reads directly from docs.google.com (works in ALL browsers)
+// ══════════════════════════════════════════════════════
+const SHEET_ID = '1pdId5uv1Wku54SGbb2q7mqkRATaogn34FSd3Q3cauJg';
+const SHEET_GID = '1025538344';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/pub?gid=' + SHEET_GID + '&single=true&output=csv';
+
+// Apps Script URL — used only for saving notes (works in Chrome)
+const API_URL = 'https://script.google.com/macros/s/AKfycbxkh9FH6J37HIBDvbf9_XKE332tn5B-GIQlEEVT0DvoFLjJ-tCq43YumDhDSwjq3luPLA/exec';
+
+// Known institution coordinates for mapping
+const INSTITUTION_COORDS = {
+  "johns hopkins":       { lat: 39.2984, lng: -76.5934 },
+  "mayo clinic":         { lat: 44.0225, lng: -92.4699 },
+  "upenn":               { lat: 39.9496, lng: -75.1940 },
+  "university of pennsylvania": { lat: 39.9496, lng: -75.1940 },
+  "ucsf":                { lat: 37.7631, lng: -122.4586 },
+  "stanford":            { lat: 37.4275, lng: -122.1697 },
+  "massachusetts general": { lat: 42.3626, lng: -71.0686 },
+  "mgh":                 { lat: 42.3626, lng: -71.0686 },
+  "university of chicago": { lat: 41.7886, lng: -87.6048 },
+  "nyu langone":         { lat: 40.7421, lng: -73.9746 },
+  "emory":               { lat: 33.7925, lng: -84.3213 },
+  "ucla":                { lat: 34.0662, lng: -118.4463 },
+  "wash u":              { lat: 38.6350, lng: -90.2631 },
+  "washington university": { lat: 38.6350, lng: -90.2631 },
+  "university of florida": { lat: 29.6408, lng: -82.3439 },
+  "duke":                { lat: 36.0085, lng: -78.9390 },
+  "vanderbilt":          { lat: 36.1426, lng: -86.8027 },
+  "mount sinai":         { lat: 40.7900, lng: -73.9526 },
+  "columbia":            { lat: 40.8405, lng: -73.9422 },
+  "yale":                { lat: 41.3032, lng: -72.9317 },
+  "ut southwestern":     { lat: 32.8128, lng: -96.8409 },
+  "baylor":              { lat: 29.7104, lng: -95.3965 },
+  "michigan":            { lat: 42.2830, lng: -83.7322 },
+  "university of michigan": { lat: 42.2830, lng: -83.7322 },
+  "indiana university":  { lat: 39.7741, lng: -86.1762 },
+  "pitt":                { lat: 40.4424, lng: -79.9569 },
+  "university of pittsburgh": { lat: 40.4424, lng: -79.9569 },
+  "northwestern":        { lat: 41.8963, lng: -87.6200 },
+  "uw medicine":         { lat: 47.6497, lng: -122.3085 },
+  "ohsu":                { lat: 45.4990, lng: -122.6850 },
+  "cedars-sinai":        { lat: 34.0751, lng: -118.3803 },
+  "cleveland clinic":    { lat: 41.5028, lng: -81.6214 },
+  "memorial sloan kettering": { lat: 40.7641, lng: -73.9568 },
+  "md anderson":         { lat: 29.7074, lng: -95.3970 },
+};
+
+let FELLOWS = [];
+let dataLoaded = false;
+
+function parseCSVtoFellows(csvText) {
+  var result = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+  if (!result.data || result.data.length === 0) return [];
+
+  var headers = result.meta.fields;
+  return result.data.map(function(row, i) {
+    var instName = (row[headers[7]] || '').toString().toLowerCase().trim(); // Col H = Training Institution
+    var instCoords = INSTITUTION_COORDS[instName] || {};
+
+    return {
+      id: i + 1,
+      name: row[headers[2]] || '',           // C: Fellow's Full Name
+      type: row[headers[3]] || '',           // D: Subspecialty
+      email: row[headers[4]] || '',          // E: Fellow's Email
+      phone: row[headers[5]] || '',          // F: Fellow's Phone
+      linkedin: row[headers[6]] || '',       // G: Fellow's LinkedIn URL
+      institution: row[headers[7]] || '',    // H: Training Institution
+      instCity: '',
+      instLat: parseFloat(row[headers[20]]) || instCoords.lat || null,  // U: Inst Latitude
+      instLng: parseFloat(row[headers[21]]) || instCoords.lng || null,  // V: Inst Longitude
+      progDirector: row[headers[8]] || '',   // I: Program Director
+      completion: row[headers[9]] || '',     // J: Expected Completion Date
+      destination: row[headers[10]] || 'TBD', // K: Destination Hospital
+      destCity: row[headers[11]] || 'TBD',   // L: Destination City, State
+      destLat: parseFloat(row[headers[18]]) || null,  // S: Dest Latitude
+      destLng: parseFloat(row[headers[19]]) || null,  // T: Dest Longitude
+      practiceType: row[headers[12]] || 'TBD', // M: Practice Type
+      wishlist: row[headers[13]] || '',      // N: Equipment Wish List
+      decisionMaker: row[headers[14]] || '', // O: Key Decision Maker(s)
+      status: row[headers[16]] || 'Not Started', // Q: Status
+      rep: row[headers[1]] || '',            // B: Your Name (Rep)
+      repTerritory: row[headers[17]] || '',  // R: Rep Territory
+      notes: row[headers[22]] || '',         // W: Rep Notes
+      rowNumber: i + 2,                      // For writing back (row 1 = header)
+    };
+  }).filter(function(f) { return f.name; }); // Skip empty rows
+}
+
+function loadData() {
+  document.getElementById('sidebar-content').innerHTML =
+    '<div style="text-align:center;padding:40px 20px;color:#7a8a9e;">' +
+    '<div style="font-size:24px;margin-bottom:12px;">Loading...</div>' +
+    '<div>Fetching fellow data from Google Sheet</div></div>';
+
+  fetch(CSV_URL)
+    .then(function(response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    })
+    .then(function(csvText) {
+      FELLOWS = parseCSVtoFellows(csvText);
+      dataLoaded = true;
+      renderSidebar();
+    })
+    .catch(function(err) {
+      document.getElementById('sidebar-content').innerHTML =
+        '<div style="padding:20px;color:#e53935;">Failed to load data: ' + err.message +
+        '<br><br><span style="color:#7a8a9e;font-size:12px;">Make sure the sheet is published to web:<br>File &rarr; Share &rarr; Publish to web &rarr; CSV &rarr; Publish</span></div>';
+    });
+}
+
+// Refresh data every 60 seconds
+setInterval(function() {
+  if (dataLoaded) {
+    fetch(CSV_URL)
+      .then(function(response) { return response.text(); })
+      .then(function(csvText) {
+        FELLOWS = parseCSVtoFellows(csvText);
+        renderSidebar();
+      })
+      .catch(function() {});
+  }
+}, 60000);
+
+// ══════════════════════════════════════════════════════
+// MAP SETUP
+// ══════════════════════════════════════════════════════
+const usBounds = L.latLngBounds([[24, -125], [50, -66]]);
+const map = L.map('map', {
+  zoomControl: false, attributionControl: false,
+  minZoom: 3, maxZoom: 10,
+  maxBounds: usBounds.pad(0.3),
+  maxBoundsViscosity: 0.8
+}).setView([39.0, -96.0], 4);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19
+}).addTo(map);
+
+// ── Load US states GeoJSON ──
+const US_STATES_URL = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
+let statesLayer = null;
+
+fetch(US_STATES_URL).then(r => r.json()).then(geojson => {
+  statesLayer = L.geoJSON(geojson, {
+    style: {
+      fillColor: '#1a2744',
+      fillOpacity: 0.5,
+      color: '#2e4a6e',
+      weight: 1.2,
+      opacity: 0.7
+    },
+    onEachFeature: function(feature, layer) {
+      const center = layer.getBounds().getCenter();
+      const abbrevs = {
+        "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA",
+        "Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA",
+        "Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS",
+        "Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD","Massachusetts":"MA",
+        "Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO","Montana":"MT",
+        "Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM",
+        "New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK",
+        "Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC",
+        "South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT",
+        "Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY",
+        "District of Columbia":"DC","Puerto Rico":"PR"
+      };
+      const abbr = abbrevs[feature.properties.name] || '';
+      if (abbr && !['DC','RI','CT','NJ','DE','NH','VT','MA','HI'].includes(abbr)) {
+        L.marker(center, {
+          icon: L.divIcon({ className: 'state-label', html: abbr, iconSize: [30, 14], iconAnchor: [15, 7] }),
+          interactive: false
+        }).addTo(map);
+      }
+      layer.on('mouseover', function() { this.setStyle({ fillColor: '#243558', fillOpacity: 0.6 }); });
+      layer.on('mouseout', function() { this.setStyle({ fillColor: '#1a2744', fillOpacity: 0.5 }); });
+    }
+  }).addTo(map);
+  statesLayer.bringToBack();
+}).catch(() => {});
+
+const svgLayer = L.svg().addTo(map);
+const svg = document.querySelector('.leaflet-overlay-pane svg');
+
+const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+['#4da6ff', '#81c784'].forEach((color, i) => {
+  const id = i === 0 ? 'arrow-ip' : 'arrow-gi';
+  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', id);
+  marker.setAttribute('viewBox', '0 0 12 12');
+  marker.setAttribute('refX', '10');
+  marker.setAttribute('refY', '6');
+  marker.setAttribute('markerWidth', '10');
+  marker.setAttribute('markerHeight', '10');
+  marker.setAttribute('orient', 'auto-start-reverse');
+  marker.setAttribute('markerUnits', 'userSpaceOnUse');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  poly.setAttribute('d', 'M 0 1 L 10 6 L 0 11 Z');
+  poly.setAttribute('fill', color);
+  marker.appendChild(poly);
+  defs.appendChild(marker);
+  const markerH = marker.cloneNode(true);
+  markerH.setAttribute('id', id + '-hi');
+  markerH.querySelector('path').setAttribute('fill', color);
+  markerH.setAttribute('markerWidth', '12');
+  markerH.setAttribute('markerHeight', '12');
+  defs.appendChild(markerH);
+});
+svg.insertBefore(defs, svg.firstChild);
+
+const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+svg.appendChild(g);
+
+let markers = [];
+let arcs = [];
+let activeCardId = null;
+
+const STATUS_COLORS = {
+  "Not Started": "#78909c", "Contacted": "#4da6ff", "Meeting Scheduled": "#ffb74d",
+  "Wish List Received": "#ab47bc", "Quoted": "#ff7043", "Won": "#66bb6a", "Lost": "#e53935"
+};
+
+function createIcon(color, size) {
+  size = size || 10;
+  return L.divIcon({
+    className: '',
+    html: '<div style="width:'+(size+4)+'px;height:'+(size+4)+'px;border-radius:50%;border:2.5px solid '+color+';background:rgba(15,23,36,0.7);box-shadow:0 0 6px '+color+';"></div>',
+    iconSize: [size+4, size+4], iconAnchor: [(size+4)/2, (size+4)/2]
+  });
+}
+
+function createDestIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: '<svg width="18" height="24" viewBox="0 0 18 24" style="filter:drop-shadow(0 0 6px '+color+');"><path d="M9 0C4 0 0 4 0 9c0 6.5 9 15 9 15s9-8.5 9-15c0-5-4-9-9-9z" fill="'+color+'" stroke="#fff" stroke-width="1.5"/><circle cx="9" cy="9" r="3.5" fill="#fff"/></svg>',
+    iconSize: [18, 24], iconAnchor: [9, 24]
+  });
+}
+
+function projectPoint(lat, lng) {
+  return map.latLngToLayerPoint([lat, lng]);
+}
+
+function drawArc(f) {
+  if (!f.destLat) return null;
+  var isIP = f.type === "IP Fellow";
+  var color = isIP ? "#4da6ff" : "#81c784";
+  var arrowId = isIP ? 'arrow-ip' : 'arrow-gi';
+  var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', color);
+  path.setAttribute('stroke-width', '2.5');
+  path.setAttribute('stroke-opacity', '0.55');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('marker-end', 'url(#' + arrowId + ')');
+  path.dataset.fellowId = f.id;
+  path.dataset.arrowId = arrowId;
+  g.appendChild(path);
+  return path;
+}
+
+function updateArcPath(path, f) {
+  if (!path || !f.destLat) return;
+  var p1 = projectPoint(f.instLat, f.instLng);
+  var p2 = projectPoint(f.destLat, f.destLng);
+  var dx = p2.x - p1.x;
+  var dy = p2.y - p1.y;
+  var dist = Math.sqrt(dx*dx + dy*dy);
+  var bend = Math.min(dist * 0.3, 80);
+  var mx = (p1.x + p2.x) / 2;
+  var my = (p1.y + p2.y) / 2 - bend;
+  path.setAttribute('d', 'M'+p1.x+','+p1.y+' Q'+mx+','+my+' '+p2.x+','+p2.y);
+}
+
+function renderMap(fellows) {
+  markers.forEach(function(m) { map.removeLayer(m); });
+  markers = [];
+  while (g.firstChild) g.removeChild(g.firstChild);
+  arcs = [];
+
+  fellows.forEach(function(f) {
+    var isTBD = !f.destLat;
+    var color = isTBD ? "#ffb74d" : (f.type === "IP Fellow" ? "#4da6ff" : "#81c784");
+
+    var originIcon = isTBD
+      ? L.divIcon({
+          className: '',
+          html: '<div style="position:relative;width:20px;height:20px;"><div style="position:absolute;top:3px;left:3px;width:14px;height:14px;background:#ffb74d;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px #ffb74d;"></div><div style="position:absolute;top:0;left:0;width:20px;height:20px;border-radius:50%;border:2px solid #ffb74d;opacity:0.5;animation:tbdPulse 2s ease-in-out infinite;"></div></div>',
+          iconSize: [20, 20], iconAnchor: [10, 10]
+        })
+      : createIcon(color, 10);
+
+    if (!f.instLat || !f.instLng) return;
+
+    var m1 = L.marker([f.instLat, f.instLng], { icon: originIcon })
+      .addTo(map)
+      .on('click', function() { selectFellow(f.id); });
+    m1._fellowId = f.id;
+    var tbdLabel = isTBD ? '<br><span style="color:#ffb74d;font-weight:600;">DESTINATION TBD</span>' : '';
+    m1.bindTooltip('<b>'+f.name+'</b><br>'+f.institution+tbdLabel, { className: 'dark-tooltip', direction: 'top', offset: [0, -12] });
+    markers.push(m1);
+
+    if (f.destLat) {
+      var m2 = L.marker([f.destLat, f.destLng], { icon: createDestIcon(color) })
+        .addTo(map)
+        .on('click', function() { selectFellow(f.id); });
+      m2._fellowId = f.id;
+      m2.bindTooltip('<b>'+f.name+'</b> &rarr; '+f.destination, { className: 'dark-tooltip', direction: 'top', offset: [0, -8] });
+      markers.push(m2);
+
+      var arc = drawArc(f);
+      if (arc) {
+        updateArcPath(arc, f);
+        arcs.push({ path: arc, fellow: f });
+      }
+    }
+  });
+}
+
+map.on('moveend zoomend', function() {
+  arcs.forEach(function(a) { updateArcPath(a.path, a.fellow); });
+});
+
+// ══════════════════════════════════════════════════════
+// SIDEBAR
+// ══════════════════════════════════════════════════════
+var currentTab = 'fellows';
+
+document.querySelectorAll('.sidebar-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.sidebar-tab').forEach(function(t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    renderSidebar();
+  });
+});
+
+function getFilteredFellows() {
+  var search = document.getElementById('search').value.toLowerCase();
+  var typeFilter = document.getElementById('filter-type').value;
+  var statusFilter = document.getElementById('filter-status').value;
+  return FELLOWS.filter(function(f) {
+    if (typeFilter && f.type !== typeFilter) return false;
+    if (statusFilter && f.status !== statusFilter) return false;
+    if (search) {
+      var haystack = (f.name+' '+f.institution+' '+f.destination+' '+f.destCity+' '+f.rep+' '+f.repTerritory+' '+f.wishlist).toLowerCase();
+      if (haystack.indexOf(search) === -1) return false;
+    }
+    return true;
+  });
+}
+
+function renderFellowsList(fellows) {
+  return fellows.map(function(f) {
+    var badgeClass = f.type === "IP Fellow" ? "badge-ip" : "badge-gi";
+    var badgeLabel = f.type === "IP Fellow" ? "IP" : "GI";
+    var statusClass = f.status.toLowerCase().replace(/\s+/g, '-');
+    var isTBD = f.destination === "TBD";
+    var dest = isTBD ? '<span style="color:#ffb74d;font-weight:600;">Destination TBD</span>' : f.destination;
+    var wishTag = f.wishlist ? '<span class="wishlist-tag">Wish List</span>' : '';
+    var notesTag = f.notes ? '<span class="wishlist-tag" style="background:rgba(77,166,255,0.15);color:#4da6ff;">Has Notes</span>' : '';
+    return '<div class="fellow-card '+(activeCardId === f.id ? 'active' : '')+'" onclick="selectFellow('+f.id+')" style="'+(isTBD ? 'border-left:3px solid #ffb74d;' : '')+'">' +
+      '<div class="name"><span class="status-dot status-'+statusClass+'"></span>'+f.name+'</div>' +
+      '<span class="badge '+badgeClass+'">'+badgeLabel+'</span>' +
+      '<span style="font-size:11px;color:#7a8a9e;">'+f.status+'</span>' +
+      '<div class="route">'+f.institution+' <span class="arrow">&rarr;</span> '+dest+'</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+wishTag+notesTag+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderTerritoriesList(fellows) {
+  var territories = {};
+  fellows.forEach(function(f) {
+    var key = f.rep || 'Unassigned';
+    if (!territories[key]) territories[key] = { rep: f.rep || 'Unassigned', territory: f.repTerritory || 'TBD', fellows: [] };
+    territories[key].fellows.push(f);
+  });
+  return Object.values(territories).sort(function(a,b) { return b.fellows.length - a.fellows.length; }).map(function(t) {
+    var withWishlist = t.fellows.filter(function(f) { return f.wishlist; }).length;
+    var placed = t.fellows.filter(function(f) { return f.destination !== "TBD"; }).length;
+    var fellowRows = t.fellows.map(function(f) {
+      return '<div class="territory-fellow-row" onclick="selectFellow('+f.id+')">' +
+        '<span><span class="badge '+(f.type==='IP Fellow'?'badge-ip':'badge-gi')+'" style="font-size:9px;">'+(f.type==='IP Fellow'?'IP':'GI')+'</span> '+f.name+'</span>' +
+        '<span class="dest">'+(f.destination === 'TBD' ? 'TBD' : f.destCity)+'</span>' +
+      '</div>';
+    }).join('');
+    return '<div class="territory-card">' +
+      '<div class="rep-name">'+t.rep+'</div>' +
+      '<div class="rep-region">'+t.territory+'</div>' +
+      '<div class="territory-stats">' +
+        '<div class="territory-stat"><div class="val">'+t.fellows.length+'</div><div class="lbl">Fellows</div></div>' +
+        '<div class="territory-stat"><div class="val">'+placed+'</div><div class="lbl">Placed</div></div>' +
+        '<div class="territory-stat"><div class="val">'+withWishlist+'</div><div class="lbl">Wish Lists</div></div>' +
+      '</div>' +
+      '<div class="territory-fellows">'+fellowRows+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderSidebar() {
+  var fellows = getFilteredFellows();
+  var container = document.getElementById('sidebar-content');
+  if (currentTab === 'fellows') {
+    container.innerHTML = renderFellowsList(fellows);
+  } else {
+    container.innerHTML = renderTerritoriesList(fellows);
+  }
+  renderMap(fellows);
+  updateKPIs(fellows);
+}
+
+// ══════════════════════════════════════════════════════
+// FELLOW SELECTION & INFO PANEL
+// ══════════════════════════════════════════════════════
+function selectFellow(id) {
+  activeCardId = id;
+  var f = FELLOWS.find(function(x) { return x.id === id; });
+  if (!f) return;
+
+  arcs.forEach(function(a) {
+    var aid = a.path.dataset.arrowId;
+    if (parseInt(a.path.dataset.fellowId) === id) {
+      a.path.setAttribute('stroke-width', '4');
+      a.path.setAttribute('stroke-opacity', '1');
+      a.path.setAttribute('marker-end', 'url(#'+aid+'-hi)');
+    } else {
+      a.path.setAttribute('stroke-width', '2.5');
+      a.path.setAttribute('stroke-opacity', '0.2');
+      a.path.setAttribute('marker-end', 'url(#'+aid+')');
+    }
+  });
+
+  document.querySelectorAll('.fellow-card').forEach(function(c) { c.classList.remove('active'); });
+
+  if (f.destLat && f.instLat) {
+    var bounds = L.latLngBounds([[f.instLat, f.instLng], [f.destLat, f.destLng]]);
+    map.fitBounds(bounds.pad(0.4));
+  } else if (f.instLat) {
+    map.setView([f.instLat, f.instLng], 6);
+  }
+
+  var badgeClass = f.type === "IP Fellow" ? "badge-ip" : "badge-gi";
+  var statusColor = STATUS_COLORS[f.status] || "#78909c";
+  document.getElementById('info-name').textContent = f.name;
+  document.getElementById('info-badges').innerHTML =
+    '<span class="badge '+badgeClass+'">'+f.type+'</span>' +
+    ' <span class="info-status-badge" style="background:'+statusColor+'22;color:'+statusColor+';">'+f.status+'</span>';
+
+  var body = '<div class="info-section">' +
+    '<h3>Training Program</h3>' +
+    '<div class="info-row"><span class="label">Institution</span><span class="value">'+f.institution+'</span></div>' +
+    '<div class="info-row"><span class="label">Completion</span><span class="value">'+f.completion+'</span></div>' +
+    '<div class="info-row"><span class="label">Email</span><span class="value">'+f.email+'</span></div>' +
+    '<div class="info-row"><span class="label">Phone</span><span class="value">'+f.phone+'</span></div>' +
+    '<div class="info-row"><span class="label">Program Director</span><span class="value">'+f.progDirector+'</span></div>' +
+  '</div>' +
+  '<div class="info-section">' +
+    '<h3>Destination</h3>' +
+    '<div class="info-row"><span class="label">Hospital</span><span class="value">'+f.destination+'</span></div>' +
+    '<div class="info-row"><span class="label">Location</span><span class="value">'+f.destCity+'</span></div>' +
+    '<div class="info-row"><span class="label">Practice Type</span><span class="value">'+f.practiceType+'</span></div>' +
+    (f.rep ? '<div class="info-row"><span class="label">Assigned Rep</span><span class="value">'+f.rep+'</span></div>' : '') +
+    (f.decisionMaker ? '<div class="info-row"><span class="label">Decision Maker</span><span class="value">'+f.decisionMaker+'</span></div>' : '') +
+  '</div>';
+
+  if (f.wishlist) {
+    body += '<div class="info-section"><h3>Equipment Wish List</h3><div class="info-wishlist">'+f.wishlist+'</div></div>';
+  }
+
+  body += '<div class="info-section">' +
+    '<h3>Notes for Destination Rep</h3>' +
+    (f.rep ? '<div class="notes-from">From: '+f.rep+(f.repTerritory ? ' ('+f.repTerritory+')' : '')+'</div>' : '') +
+    '<div class="info-notes-box" contenteditable="true" data-fellow-id="'+f.id+'" data-row="'+f.rowNumber+'" onblur="saveNoteAPI(this)" placeholder="Add notes to help the destination rep...">'+( f.notes || '')+'</div>' +
+    '<div style="font-size:10px;color:#556;margin-top:6px;font-style:italic;">Click to edit &mdash; notes auto-save when you click away</div>' +
+  '</div>';
+
+  document.getElementById('info-body').innerHTML = body;
+  document.getElementById('info-panel').classList.add('visible');
+
+  var container = document.getElementById('sidebar-content');
+  if (currentTab === 'fellows') {
+    container.innerHTML = renderFellowsList(getFilteredFellows());
+  }
+}
+
+function closeInfoPanel() {
+  document.getElementById('info-panel').classList.remove('visible');
+  activeCardId = null;
+  arcs.forEach(function(a) {
+    a.path.setAttribute('stroke-width', '2.5');
+    a.path.setAttribute('stroke-opacity', '0.55');
+    a.path.setAttribute('marker-end', 'url(#'+a.path.dataset.arrowId+')');
+  });
+  document.querySelectorAll('.fellow-card').forEach(function(c) { c.classList.remove('active'); });
+}
+
+// ══════════════════════════════════════════════════════
+// KPIs
+// ══════════════════════════════════════════════════════
+function updateKPIs(fellows) {
+  document.getElementById('kpi-total').textContent = fellows.length;
+  document.getElementById('kpi-ip').textContent = fellows.filter(function(f) { return f.type === "IP Fellow"; }).length;
+  document.getElementById('kpi-gi').textContent = fellows.filter(function(f) { return f.type === "Advanced GI Fellow"; }).length;
+  document.getElementById('kpi-placed').textContent = fellows.filter(function(f) { return f.destination !== "TBD"; }).length;
+  document.getElementById('kpi-wishlists').textContent = fellows.filter(function(f) { return f.wishlist; }).length;
+}
+
+// ══════════════════════════════════════════════════════
+// EVENT LISTENERS
+// ══════════════════════════════════════════════════════
+document.getElementById('search').addEventListener('input', renderSidebar);
+document.getElementById('filter-type').addEventListener('change', renderSidebar);
+document.getElementById('filter-status').addEventListener('change', renderSidebar);
+
+// ══════════════════════════════════════════════════════
+// NOTES SAVE (via fetch API)
+// ══════════════════════════════════════════════════════
+function saveNoteAPI(el) {
+  var id = parseInt(el.dataset.fellowId);
+  var rowNumber = parseInt(el.dataset.row);
+  var text = el.innerText.trim();
+
+  var f = FELLOWS.find(function(x) { return x.id === id; });
+  if (f) f.notes = text;
+
+  el.style.borderLeftColor = '#ffb74d'; // Saving...
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'saveNote', rowNumber: rowNumber, noteText: text })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    el.style.borderLeftColor = '#66bb6a'; // Green = saved
+    setTimeout(function() { el.style.borderLeftColor = '#4da6ff'; }, 2000);
+  })
+  .catch(function() {
+    el.style.borderLeftColor = '#ff7043'; // Orange = save unavailable
+    // Show Safari-friendly message
+    var msg = el.parentNode.querySelector('.save-warning');
+    if (!msg) {
+      msg = document.createElement('div');
+      msg.className = 'save-warning';
+      msg.style.cssText = 'font-size:10px;color:#ff7043;margin-top:4px;';
+      msg.textContent = 'Note saved locally. To save to sheet, open dashboard in Chrome.';
+      el.parentNode.appendChild(msg);
+    }
+  });
+}
+
+// Tooltip styling
+var tooltipStyle = document.createElement('style');
+tooltipStyle.textContent = '.dark-tooltip { background: #1a2332 !important; color: #e0e6ed !important; border: 1px solid #2a3a4e !important; border-radius: 6px !important; font-size: 12px !important; padding: 6px 10px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; } .dark-tooltip::before { border-top-color: #2a3a4e !important; } .info-notes-box:empty:before { content: attr(placeholder); color: #556; font-style: italic; } .info-notes-box:focus { outline: none; border-color: #4da6ff; background: #141e2e; }';
+document.head.appendChild(tooltipStyle);
+
+// ── INIT ──
+loadData();
+</script>
+</body>
+</html>
