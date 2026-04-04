@@ -260,6 +260,58 @@ const INSTITUTION_COORDS = {
 };
 
 let FELLOWS = [];
+
+      // Territory definitions: map state abbreviations to territory name and rep
+      var TERRITORIES = {
+        "ME":{territory:"Northeast",rep:""},"NH":{territory:"Northeast",rep:""},"VT":{territory:"Northeast",rep:""},
+        "MA":{territory:"Northeast",rep:""},"RI":{territory:"Northeast",rep:""},"CT":{territory:"Northeast",rep:""},
+        "NY":{territory:"Northeast",rep:""},"NJ":{territory:"Northeast",rep:""},"PA":{territory:"Northeast",rep:""},
+        "DE":{territory:"Mid-Atlantic",rep:""},"MD":{territory:"Mid-Atlantic",rep:""},"DC":{territory:"Mid-Atlantic",rep:""},
+        "VA":{territory:"Mid-Atlantic",rep:""},"WV":{territory:"Mid-Atlantic",rep:""},
+        "NC":{territory:"Southeast",rep:""},"SC":{territory:"Southeast",rep:""},
+        "GA":{territory:"Southeast",rep:""},"FL":{territory:"Southeast",rep:""},
+        "AL":{territory:"Southeast",rep:""},"MS":{territory:"Southeast",rep:""},
+        "TN":{territory:"Southeast",rep:""},"KY":{territory:"Southeast",rep:""},
+        "OH":{territory:"Midwest",rep:"Mike Torres"},"MI":{territory:"Midwest",rep:"Mike Torres"},
+        "IN":{territory:"Midwest",rep:"Mike Torres"},"IL":{territory:"Midwest",rep:"Mike Torres"},
+        "WI":{territory:"Midwest",rep:"Mike Torres"},"MN":{territory:"Midwest",rep:"Mike Torres"},
+        "IA":{territory:"Midwest",rep:""},"MO":{territory:"Midwest",rep:""},
+        "ND":{territory:"Central",rep:""},"SD":{territory:"Central",rep:""},
+        "NE":{territory:"Central",rep:""},"KS":{territory:"Central",rep:""},
+        "OK":{territory:"Central",rep:""},"AR":{territory:"Central",rep:""},
+        "LA":{territory:"Central",rep:""},"TX":{territory:"Central",rep:""},
+        "MT":{territory:"Mountain",rep:""},"WY":{territory:"Mountain",rep:""},
+        "CO":{territory:"Mountain",rep:""},"NM":{territory:"Mountain",rep:""},
+        "ID":{territory:"Mountain",rep:""},"UT":{territory:"Mountain",rep:""},
+        "AZ":{territory:"Mountain",rep:""},"NV":{territory:"Mountain",rep:""},
+        "WA":{territory:"West",rep:""},"OR":{territory:"West",rep:""},
+        "CA":{territory:"West",rep:""},"HI":{territory:"West",rep:""}
+      };
+
+      function extractState(cityState) {
+        if (!cityState || cityState === "TBD") return null;
+        var parts = cityState.split(",");
+        if (parts.length >= 2) { var st = parts[parts.length-1].trim(); if (st.length === 2) return st.toUpperCase(); }
+        return null;
+      }
+
+      function assignTerritories() {
+        FELLOWS.forEach(function(f) {
+          var instState = extractState(f.instCity);
+          if (instState && TERRITORIES[instState]) {
+            f.instTerritory = TERRITORIES[instState].territory;
+            if (!f.rep && TERRITORIES[instState].rep) {
+              f.rep = TERRITORIES[instState].rep;
+              f.repTerritory = TERRITORIES[instState].territory;
+            }
+          }
+          var destState = extractState(f.destCity);
+          if (destState && TERRITORIES[destState]) {
+            f.destTerritory = TERRITORIES[destState].territory;
+          }
+        });
+      }
+
 let dataLoaded = false;
 
 function parseCSVtoFellows(csvText) {
@@ -323,6 +375,7 @@ function loadData() {
         ];
       }
       dataLoaded = true;
+      assignTerritories();
       renderSidebar();
     })
     .catch(function(err) {
@@ -338,8 +391,8 @@ setInterval(function() {
     fetch(CSV_URL)
       .then(function(response) { return response.text(); })
       .then(function(csvText) {
-        FELLOWS = parseCSVtoFellows(csvText);
-        renderSidebar();
+        var newFellows = parseCSVtoFellows(csvText);
+        if (newFellows.length > 0) { FELLOWS = newFellows; assignTerritories(); renderSidebar(); }
       })
       .catch(function() {});
   }
@@ -681,7 +734,7 @@ function selectFellow(id) {
     '<div class="info-row"><span class="label">Completion</span><span class="value">'+f.completion+'</span></div>' +
     '<div class="info-row"><span class="label">Email</span><span class="value">'+f.email+'</span></div>' +
     '<div class="info-row"><span class="label">Phone</span><span class="value">'+f.phone+'</span></div>' +
-    '<div class="info-row"><span class="label">Program Director</span><span class="value">'+f.progDirector+'</span></div>' +
+    '<div class="info-row"><span class="label">Program Director</span><span class="value">'+f.progDirector+'</span></div>' + (f.rep ? '<div class="info-row"><span class="label">Assigned Rep</span><span class="value">'+f.rep+(f.repTerritory ? ' ('+f.repTerritory+')' : '')+'</span></div>' : '') + (f.instTerritory ? '<div class="info-row"><span class="label">Training Territory</span><span class="value">'+f.instTerritory+'</span></div>' : '') +
   '</div>' +
   '<div class="info-section">' +
     '<h3>Destination</h3>' +
@@ -698,7 +751,7 @@ function selectFellow(id) {
 
   body += '<div class="info-section">' +
     '<h3>Notes for Destination Rep</h3>' +
-    (f.rep ? '<div class="notes-from">From: '+f.rep+(f.repTerritory ? ' ('+f.repTerritory+')' : '')+'</div>' : '') +
+    (f.rep ? '<div class="notes-from">From: '+f.rep+(f.repTerritory ? ' ('+f.repTerritory+')' : '')+'</div>' : '') + (f.destTerritory ? '<div class="info-row"><span class="label">Dest. Territory</span><span class="value">'+f.destTerritory+'</span></div>' : '') +
     '<div class="info-notes-box" contenteditable="true" data-fellow-id="'+f.id+'" data-row="'+f.rowNumber+'" onblur="saveNoteAPI(this)" placeholder="Add notes to help the destination rep...">'+( f.notes || '')+'</div>' +
     '<div style="font-size:10px;color:#556;margin-top:6px;font-style:italic;">Click to edit &mdash; notes auto-save when you click away</div>' +
   '</div>';
