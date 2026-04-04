@@ -11,7 +11,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1724; color: #e0e6ed; overflow: hidden; height: 100vh; }
 
-  /* ── TOP BAR ── */
+  /* ââ TOP BAR ââ */
   .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #1a2332; border-bottom: 1px solid #2a3a4e; height: 56px; z-index: 1000; position: relative; }
   .topbar h1 { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
   .topbar h1 span { color: #4da6ff; }
@@ -20,10 +20,10 @@
   .kpi-val { font-size: 22px; font-weight: 700; color: #4da6ff; }
   .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a8a9e; margin-top: 2px; }
 
-  /* ── LAYOUT ── */
+  /* ââ LAYOUT ââ */
   .main { display: flex; height: calc(100vh - 56px); }
 
-  /* ── SIDEBAR ── */
+  /* ââ SIDEBAR ââ */
   .sidebar { width: 340px; min-width: 340px; background: #1a2332; border-right: 1px solid #2a3a4e; display: flex; flex-direction: column; overflow: hidden; }
   .sidebar-tabs { display: flex; border-bottom: 1px solid #2a3a4e; }
   .sidebar-tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; cursor: pointer; color: #7a8a9e; border-bottom: 2px solid transparent; transition: all 0.2s; }
@@ -38,7 +38,7 @@
   .sidebar-content::-webkit-scrollbar { width: 6px; }
   .sidebar-content::-webkit-scrollbar-thumb { background: #2a3a4e; border-radius: 3px; }
 
-  /* ── FELLOW CARD ── */
+  /* ââ FELLOW CARD ââ */
   .fellow-card { background: #0f1724; border: 1px solid #2a3a4e; border-radius: 8px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
   .fellow-card:hover, .fellow-card.active { border-color: #4da6ff; background: rgba(77,166,255,0.05); }
   .fellow-card .name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
@@ -56,7 +56,7 @@
   .status-quoted { background: #ff7043; }
   .status-won { background: #66bb6a; }
 
-  /* ── TERRITORY CARD ── */
+  /* ââ TERRITORY CARD ââ */
   .territory-card { background: #0f1724; border: 1px solid #2a3a4e; border-radius: 8px; padding: 14px; margin-bottom: 8px; }
   .territory-card .rep-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
   .territory-card .rep-region { font-size: 11px; color: #7a8a9e; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -69,14 +69,14 @@
   .territory-fellow-row:hover { color: #4da6ff; }
   .territory-fellow-row .dest { color: #7a8a9e; font-size: 11px; }
 
-  /* ── MAP AREA ── */
+  /* ââ MAP AREA ââ */
   .map-wrap { flex: 1; position: relative; }
   #map { height: 100%; width: 100%; background: #0f1724; }
   .leaflet-tile-pane { filter: saturate(0.2) brightness(0.45) contrast(1.1); }
   .leaflet-container { background: #0a0f1a; }
   .state-label { font-size: 10px; font-weight: 600; color: rgba(180,200,220,0.45); letter-spacing: 1px; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: none; }
 
-  /* ── INFO PANEL (floating over map) ── */
+  /* ââ INFO PANEL (floating over map) ââ */
   .info-panel { position: absolute; top: 16px; right: 16px; width: 360px; max-height: calc(100% - 32px); background: #1a2332; border: 1px solid #2a3a4e; border-radius: 12px; z-index: 800; overflow-y: auto; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   .info-panel.visible { display: block; }
   .info-panel-header { padding: 16px; border-bottom: 1px solid #2a3a4e; display: flex; justify-content: space-between; align-items: flex-start; }
@@ -94,13 +94,13 @@
   .info-notes-box { background: #0f1724; border: 1px solid #2a3a4e; border-left: 3px solid #4da6ff; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.6; color: #e0e6ed; white-space: pre-wrap; }
   .notes-from { font-size: 11px; color: #4da6ff; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
-  /* ── MAP LEGEND ── */
+  /* ââ MAP LEGEND ââ */
   .map-legend { position: absolute; bottom: 24px; left: 16px; background: rgba(26,35,50,0.95); border: 1px solid #2a3a4e; border-radius: 8px; padding: 12px 16px; z-index: 800; font-size: 11px; }
   .legend-title { font-weight: 700; color: #fff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
   .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: #b0bec5; }
   .legend-line { width: 24px; height: 3px; border-radius: 2px; }
 
-  /* ── ANIMATIONS ── */
+  /* ââ ANIMATIONS ââ */
   @keyframes arcDraw { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
   @keyframes pulse { 0%,100% { r: 5; opacity: 0.8; } 50% { r: 8; opacity: 0.4; } }
   @keyframes tbdPulse { 0%,100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.6); opacity: 0; } }
@@ -167,15 +167,15 @@
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-// CONFIG — Published Google Sheet CSV URL
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// CONFIG â Published Google Sheet CSV URL
 // This reads directly from docs.google.com (works in ALL browsers)
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const SHEET_ID = '1pdId5uv1Wku54SGbb2q7mqkRATaogn34FSd3Q3cauJg';
 const SHEET_GID = '1025538344';
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/pub?gid=' + SHEET_GID + '&single=true&output=csv';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQMZLsBzkHPqJ4SvVtTfzii1cFslnICFK917VLggZJC4OmoLtS3lblhI5mwJx1_ptBTLIDLM8AcmKv1/pub?gid=1025538344&single=true&output=csv';
 
-// Apps Script URL — used only for saving notes (works in Chrome)
+// Apps Script URL â used only for saving notes (works in Chrome)
 const API_URL = 'https://script.google.com/macros/s/AKfycbxkh9FH6J37HIBDvbf9_XKE332tn5B-GIQlEEVT0DvoFLjJ-tCq43YumDhDSwjq3luPLA/exec';
 
 // Known institution coordinates for mapping
@@ -293,9 +293,9 @@ setInterval(function() {
   }
 }, 60000);
 
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // MAP SETUP
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const usBounds = L.latLngBounds([[24, -125], [50, -66]]);
 const map = L.map('map', {
   zoomControl: false, attributionControl: false,
@@ -309,7 +309,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
   maxZoom: 19
 }).addTo(map);
 
-// ── Load US states GeoJSON ──
+// ââ Load US states GeoJSON ââ
 const US_STATES_URL = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
 let statesLayer = null;
 
@@ -493,9 +493,9 @@ map.on('moveend zoomend', function() {
   arcs.forEach(function(a) { updateArcPath(a.path, a.fellow); });
 });
 
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // SIDEBAR
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 var currentTab = 'fellows';
 
 document.querySelectorAll('.sidebar-tab').forEach(function(tab) {
@@ -582,9 +582,9 @@ function renderSidebar() {
   updateKPIs(fellows);
 }
 
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // FELLOW SELECTION & INFO PANEL
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function selectFellow(id) {
   activeCardId = id;
   var f = FELLOWS.find(function(x) { return x.id === id; });
@@ -667,9 +667,9 @@ function closeInfoPanel() {
   document.querySelectorAll('.fellow-card').forEach(function(c) { c.classList.remove('active'); });
 }
 
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // KPIs
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function updateKPIs(fellows) {
   document.getElementById('kpi-total').textContent = fellows.length;
   document.getElementById('kpi-ip').textContent = fellows.filter(function(f) { return f.type === "IP Fellow"; }).length;
@@ -678,16 +678,16 @@ function updateKPIs(fellows) {
   document.getElementById('kpi-wishlists').textContent = fellows.filter(function(f) { return f.wishlist; }).length;
 }
 
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // EVENT LISTENERS
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 document.getElementById('search').addEventListener('input', renderSidebar);
 document.getElementById('filter-type').addEventListener('change', renderSidebar);
 document.getElementById('filter-status').addEventListener('change', renderSidebar);
 
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 // NOTES SAVE (via fetch API)
-// ══════════════════════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function saveNoteAPI(el) {
   var id = parseInt(el.dataset.fellowId);
   var rowNumber = parseInt(el.dataset.row);
@@ -727,7 +727,7 @@ var tooltipStyle = document.createElement('style');
 tooltipStyle.textContent = '.dark-tooltip { background: #1a2332 !important; color: #e0e6ed !important; border: 1px solid #2a3a4e !important; border-radius: 6px !important; font-size: 12px !important; padding: 6px 10px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important; } .dark-tooltip::before { border-top-color: #2a3a4e !important; } .info-notes-box:empty:before { content: attr(placeholder); color: #556; font-style: italic; } .info-notes-box:focus { outline: none; border-color: #4da6ff; background: #141e2e; }';
 document.head.appendChild(tooltipStyle);
 
-// ── INIT ──
+// ââ INIT ââ
 loadData();
 </script>
 </body>
