@@ -814,7 +814,7 @@ function selectFellow(id) {
     body += '<div class="info-section"><h3>Equipment Wish List</h3><div class="info-wishlist">'+f.wishlist+'</div></div>';
   }
 
-  body +=  + '<div class="info-save-bar"><button class="btn-save" onclick="handleSaveClick()">Save Changes</button><button class="btn-cancel" onclick="selectFellow(activeCardId)">Cancel</button></div><div class="save-status" id="save-status"></div>''<div class="info-section">' +
+  body += '<div class="info-save-bar"><button class="btn-save" onclick="handleSaveClick()">Save Changes</button><button class="btn-cancel" onclick="selectFellow(activeCardId)">Cancel</button></div><div class="save-status" id="save-status"></div>' + '<div class="info-section">' +
     '<h3>Notes for Destination Rep</h3>' +
     (f.rep ? '<div class="notes-from">From: '+f.rep+(f.repTerritory ? ' ('+f.repTerritory+')' : '')+'</div>' : '') + (f.destTerritory ? '<div class="info-row"><span class="label">Dest. Territory</span><span class="value">'+f.destTerritory+'</span></div>' : '') +
     '<div class="info-notes-box" contenteditable="true" data-fellow-id="'+f.id+'" data-row="'+f.rowNumber+'" onblur="saveNoteAPI(this)" placeholder="Add notes to help the destination rep...">'+( f.notes || '')+'</div>' +
