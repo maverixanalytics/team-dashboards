@@ -193,7 +193,7 @@
       <input type="text" id="search" placeholder="Search fellows, hospitals, reps...">
       <div class="filter-row">
         <select id="filter-type"><option value="">All Types</option><option value="IP Fellow">IP Fellow</option><option value="Advanced GI Fellow">Adv GI Fellow</option></select>
-        <select id="filter-status"><option value="">All Statuses</option><option value="Not Started">Not Started</option><option value="Contacted">Contacted</option><option value="Meeting Scheduled">Meeting Set</option><option value="Wish List Received">Wish List</option><option value="Quoted">Quoted</option><option value="Won">Won</option></select>
+        <select id="filter-status"><option value="">All Statuses</option><option value="Not Started">Not Started</option><option value="Introduction Made">Introduction Made</option><option value="Meeting Scheduled">Meeting Set</option><option value="Wish List Received">Wish List</option><option value="Quoted">Quoted</option><option value="Won">Won</option></select>
       </div>
     </div>
     <div class="sidebar-content" id="sidebar-content"></div>
@@ -421,7 +421,7 @@ function parseCSVtoFellows(csvText) {
       notes: row[headers[22]] || '',         // W: Rep Notes
       rowNumber: i + 2,                      // For writing back (row 1 = header)
     };
-  }).filter(function(f) { return f.name; }); // Skip empty rows
+  }).map(function(f) { if (f.status === "Contacted") f.status = "Introduction Made"; return f; }).filter(function(f) { return f.name; }); // Skip empty rows
 }
 
 function loadData() {
@@ -569,7 +569,7 @@ let arcs = [];
 let activeCardId = null;
 
 const STATUS_COLORS = {
-  "Not Started": "#78909c", "Contacted": "#4da6ff", "Meeting Scheduled": "#ffb74d",
+  "Not Started": "#78909c", "Introduction Made": "#4da6ff", "Meeting Scheduled": "#ffb74d",
   "Wish List Received": "#ab47bc", "Quoted": "#ff7043", "Won": "#66bb6a", "Lost": "#e53935"
 };
 
@@ -748,6 +748,7 @@ function renderTerritoriesList(fellows) {
     t.destination.forEach(function(f) { allIds[f.id] = f; });
     var unique = Object.values(allIds);
     var withWishlist = unique.filter(function(f) { return f.wishlist; }).length;
+    var needsIntro = unique.filter(function(f) { return f.status === 'Not Started'; }).length;
     var placed = unique.filter(function(f) { return f.destination !== 'TBD'; }).length;
     var repNames = Object.keys(t.reps).join(', ') || 'Unassigned';
     var trainingRows = t.training.map(function(f) { return fellowRow(f, f.instCity || 'TBD'); }).join('');
@@ -765,6 +766,7 @@ function renderTerritoriesList(fellows) {
         '<div class="territory-stat"><div class="val">'+destFiltered.length+'</div><div class="lbl">Destinations</div></div>' +
         '<div class="territory-stat"><div class="val">'+placed+'</div><div class="lbl">Placed</div></div>' +
         '<div class="territory-stat"><div class="val">'+withWishlist+'</div><div class="lbl">Wish Lists</div></div>' +
+        '<div class="territory-stat"><div class="val" style="color:#ff7043">'+needsIntro+'</div><div class="lbl">Intros to Make</div></div>' +
       '</div>' +
       trainingSection + destSection +
     '</div>';
@@ -817,7 +819,7 @@ function selectFellow(id) {
   var badgeClass = f.type === "IP Fellow" ? "badge-ip" : "badge-gi";
   var statusColor = STATUS_COLORS[f.status] || "#78909c";
   document.getElementById('info-name').textContent = f.name;
-  document.getElementById('info-badges').innerHTML = '<span class="badge '+badgeClass+'">'+f.type+'</span> <select class="info-editable-select" id="edit-status" onchange="">' + '<option value="Not Started"'+(f.status==="Not Started"?' selected':'')+'>Not Started</option>' + '<option value="Contacted"'+(f.status==="Contacted"?' selected':'')+'>Contacted</option>' + '<option value="Meeting Scheduled"'+(f.status==="Meeting Scheduled"?' selected':'')+'>Meeting Set</option>' + '<option value="Wish List Received"'+(f.status==="Wish List Received"?' selected':'')+'>Wish List</option>' + '<option value="Quoted"'+(f.status==="Quoted"?' selected':'')+'>Quoted</option>' + '<option value="Won"'+(f.status==="Won"?' selected':'')+'>Won</option></select>';
+  document.getElementById('info-badges').innerHTML = '<span class="badge '+badgeClass+'">'+f.type+'</span> <select class="info-editable-select" id="edit-status" onchange="">' + '<option value="Not Started"'+(f.status==="Not Started"?' selected':'')+'>Not Started</option>' + '<option value="Introduction Made"'+(f.status==="Introduction Made"?' selected':'')+'>Introduction Made</option>' + '<option value="Meeting Scheduled"'+(f.status==="Meeting Scheduled"?' selected':'')+'>Meeting Set</option>' + '<option value="Wish List Received"'+(f.status==="Wish List Received"?' selected':'')+'>Wish List</option>' + '<option value="Quoted"'+(f.status==="Quoted"?' selected':'')+'>Quoted</option>' + '<option value="Won"'+(f.status==="Won"?' selected':'')+'>Won</option></select>';
 
   var body = '<div class="info-section">' +
     '<h3>Training Program</h3>' +
