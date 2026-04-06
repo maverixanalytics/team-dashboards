@@ -142,6 +142,22 @@
     .info-panel { width: calc(100% - 16px); right: 8px; }
   }
 
+
+      /* Inline editing styles */
+      .info-editable { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 2px 6px; color: #e0e0e0; cursor: pointer; transition: border-color 0.2s; }
+      .info-editable:hover { border-color: #ffb74d; }
+      .info-editable:focus { border-color: #ffb74d; outline: none; background: rgba(255,255,255,0.12); }
+      .info-editable-select { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 2px 4px; color: #e0e0e0; cursor: pointer; -webkit-appearance: none; appearance: none; }
+      .info-editable-select:focus { border-color: #ffb74d; outline: none; }
+      .info-editable-select option { background: #1a2332; color: #e0e0e0; }
+      .info-save-bar { display: flex; gap: 8px; padding: 8px 0; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
+      .btn-save { background: #ffb74d; color: #1a2332; border: none; border-radius: 4px; padding: 6px 16px; cursor: pointer; font-weight: 600; font-size: 12px; }
+      .btn-save:hover { background: #ffa726; }
+      .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-cancel { background: transparent; color: #90a4ae; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 6px 16px; cursor: pointer; font-size: 12px; }
+      .btn-cancel:hover { color: #e0e0e0; border-color: rgba(255,255,255,0.3); }
+      .save-status { font-size: 11px; color: #4caf50; padding: 4px 0; display: none; }
+      .save-status.error { color: #ef5350; }
 </style>
 </head>
 <body>
@@ -295,7 +311,58 @@ let FELLOWS = [];
         return null;
       }
 
-      function assignTerritories() {
+      // Apps Script Web App URL — replace with your deployed URL
+      var APPS_SCRIPT_URL = "";
+
+      // Save fellow updates to Google Sheet via Apps Script
+      function saveFellowUpdate(fellowId, updates) {
+        var f = FELLOWS.find(function(x) { return x.id === fellowId; });
+        if (!f) return Promise.reject("Fellow not found");
+        // Update local data immediately
+        Object.keys(updates).forEach(function(k) { f[k] = updates[k]; });
+        assignTerritories();
+        renderSidebar();
+        // If no Apps Script URL configured, just save locally
+        if (!APPS_SCRIPT_URL) {
+          return Promise.resolve({success: true, local: true});
+        }
+        // POST to Apps Script
+        return fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({rowNumber: f.rowNumber, updates: updates})
+        }).then(function() { return {success: true}; });
+      }
+
+            // Handle save button click — read all editable fields
+      function handleSaveClick() {
+        if (!activeCardId) return;
+        var updates = {};
+        var statusEl = document.getElementById("edit-status");
+        var destEl = document.getElementById("edit-destination");
+        var destCityEl = document.getElementById("edit-destCity");
+        var ptEl = document.getElementById("edit-practiceType");
+        if (statusEl) updates.status = statusEl.value;
+        if (destEl) updates.destination = destEl.value;
+        if (destCityEl) updates.destCity = destCityEl.value;
+        if (ptEl) updates.practiceType = ptEl.value;
+        var statusDiv = document.getElementById("save-status");
+        statusDiv.style.display = "block";
+        statusDiv.className = "save-status";
+        statusDiv.textContent = "Saving...";
+        saveFellowUpdate(activeCardId, updates).then(function(r) {
+          statusDiv.textContent = r.local ? "Saved locally (connect Apps Script to sync to sheet)" : "Saved to sheet!";
+          statusDiv.className = "save-status";
+          setTimeout(function() { statusDiv.style.display = "none"; }, 3000);
+          selectFellow(activeCardId);
+        }).catch(function(err) {
+          statusDiv.textContent = "Error: " + err;
+          statusDiv.className = "save-status error";
+        });
+      }
+
+function assignTerritories() {
         FELLOWS.forEach(function(f) {
           var instState = extractState(f.instCity);
           if (instState && TERRITORIES[instState]) {
@@ -724,9 +791,7 @@ function selectFellow(id) {
   var badgeClass = f.type === "IP Fellow" ? "badge-ip" : "badge-gi";
   var statusColor = STATUS_COLORS[f.status] || "#78909c";
   document.getElementById('info-name').textContent = f.name;
-  document.getElementById('info-badges').innerHTML =
-    '<span class="badge '+badgeClass+'">'+f.type+'</span>' +
-    ' <span class="info-status-badge" style="background:'+statusColor+'22;color:'+statusColor+';">'+f.status+'</span>';
+  document.getElementById('info-badges').innerHTML = '<span class="badge '+badgeClass+'">'+f.type+'</span> <select class="info-editable-select" id="edit-status" onchange="">' + '<option value="Not Started"'+(f.status==="Not Started"?' selected':'')+'>Not Started</option>' + '<option value="Contacted"'+(f.status==="Contacted"?' selected':'')+'>Contacted</option>' + '<option value="Meeting Scheduled"'+(f.status==="Meeting Scheduled"?' selected':'')+'>Meeting Set</option>' + '<option value="Wish List Received"'+(f.status==="Wish List Received"?' selected':'')+'>Wish List</option>' + '<option value="Quoted"'+(f.status==="Quoted"?' selected':'')+'>Quoted</option>' + '<option value="Won"'+(f.status==="Won"?' selected':'')+'>Won</option></select>';
 
   var body = '<div class="info-section">' +
     '<h3>Training Program</h3>' +
@@ -738,9 +803,9 @@ function selectFellow(id) {
   '</div>' +
   '<div class="info-section">' +
     '<h3>Destination</h3>' +
-    '<div class="info-row"><span class="label">Hospital</span><span class="value">'+f.destination+'</span></div>' +
-    '<div class="info-row"><span class="label">Location</span><span class="value">'+f.destCity+'</span></div>' +
-    '<div class="info-row"><span class="label">Practice Type</span><span class="value">'+f.practiceType+'</span></div>' +
+    '<div class="info-row"><span class="label">Hospital</span><span class="value"><input class="info-editable" id="edit-destination" value="'+f.destination+'" placeholder="Enter hospital"></span></div>' +
+    '<div class="info-row"><span class="label">Location</span><span class="value"><input class="info-editable" id="edit-destCity" value="'+f.destCity+'" placeholder="City, ST"></span></div>' +
+    '<div class="info-row"><span class="label">Practice Type</span><span class="value"><input class="info-editable" id="edit-practiceType" value="'+f.practiceType+'" placeholder="e.g. Academic"></span></div>' +
     (f.rep ? '<div class="info-row"><span class="label">Assigned Rep</span><span class="value">'+f.rep+'</span></div>' : '') +
     (f.decisionMaker ? '<div class="info-row"><span class="label">Decision Maker</span><span class="value">'+f.decisionMaker+'</span></div>' : '') +
   '</div>';
@@ -749,7 +814,7 @@ function selectFellow(id) {
     body += '<div class="info-section"><h3>Equipment Wish List</h3><div class="info-wishlist">'+f.wishlist+'</div></div>';
   }
 
-  body += '<div class="info-section">' +
+  body +=  + '<div class="info-save-bar"><button class="btn-save" onclick="handleSaveClick()">Save Changes</button><button class="btn-cancel" onclick="selectFellow(activeCardId)">Cancel</button></div><div class="save-status" id="save-status"></div>''<div class="info-section">' +
     '<h3>Notes for Destination Rep</h3>' +
     (f.rep ? '<div class="notes-from">From: '+f.rep+(f.repTerritory ? ' ('+f.repTerritory+')' : '')+'</div>' : '') + (f.destTerritory ? '<div class="info-row"><span class="label">Dest. Territory</span><span class="value">'+f.destTerritory+'</span></div>' : '') +
     '<div class="info-notes-box" contenteditable="true" data-fellow-id="'+f.id+'" data-row="'+f.rowNumber+'" onblur="saveNoteAPI(this)" placeholder="Add notes to help the destination rep...">'+( f.notes || '')+'</div>' +
