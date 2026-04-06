@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Territory Sales Map</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+  .header { background: linear-gradient(135deg, #1e3a5f 0%, #2d5986 100%); color: white; padding: 24px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .header h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 4px; }
+  .header p { font-size: 0.85rem; opacity: 0.8; }
+
+  .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 20px 32px; background: white; border-bottom: 1px solid #e2e8f0; }
+  .control-group { display: flex; flex-direction: column; gap: 4px; }
+  .control-group label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+  select { padding: 8px 32px 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; background: white; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+  .btn-clear { padding: 8px 16px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: white; font-size: 0.85rem; cursor: pointer; color: #64748b; transition: all 0.15s; }
+  .btn-clear:hover { background: #f8fafc; border-color: #94a3b8; color: #334155; }
+
+  .main { display: flex; gap: 0; padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+  .map-container { flex: 1; position: relative; }
+  .map-svg { width: 100%; height: auto; }
+
+  .state-group { cursor: pointer; }
+  .state-path { fill: #dce4ed; stroke: #fff; stroke-width: 2.5; stroke-linejoin: round; transition: fill 0.2s; }
+  .state-group:hover .state-path { fill: #c5d0dd; }
+  .state-group.selected .state-path { fill: #3b82f6; }
+  .state-group.selected:hover .state-path { fill: #2563eb; }
+
+  .state-group.rep-1 .state-path { fill: #3b82f6; }
+  .state-group.rep-1.selected .state-path { fill: #1d4ed8; }
+  .state-group.rep-2 .state-path { fill: #10b981; }
+  .state-group.rep-2.selected .state-path { fill: #059669; }
+  .state-group.rep-3 .state-path { fill: #f59e0b; }
+  .state-group.rep-3.selected .state-path { fill: #d97706; }
+  .state-group.rep-4 .state-path { fill: #ef4444; }
+  .state-group.rep-4.selected .state-path { fill: #dc2626; }
+  .state-group.rep-5 .state-path { fill: #8b5cf6; }
+  .state-group.rep-5.selected .state-path { fill: #7c3aed; }
+  .state-group.rep-6 .state-path { fill: #ec4899; }
+  .state-group.rep-6.selected .state-path { fill: #db2777; }
+  .state-group.rep-7 .state-path { fill: #14b8a6; }
+  .state-group.rep-7.selected .state-path { fill: #0d9488; }
+
+  .state-label { pointer-events: none; font-size: 14px; font-weight: 700; fill: #334155; text-anchor: middle; }
+  .state-label-amount { pointer-events: none; font-size: 15px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+  .state-group.selected .state-label,
+  .state-group.selected .state-label-amount { fill: white; }
+  .state-group.rep-1 .state-label, .state-group.rep-1 .state-label-amount,
+  .state-group.rep-2 .state-label, .state-group.rep-2 .state-label-amount,
+  .state-group.rep-3 .state-label, .state-group.rep-3 .state-label-amount,
+  .state-group.rep-4 .state-label, .state-group.rep-4 .state-label-amount,
+  .state-group.rep-5 .state-label, .state-group.rep-5 .state-label-amount,
+  .state-group.rep-6 .state-label, .state-group.rep-6 .state-label-amount,
+  .state-group.rep-7 .state-label, .state-group.rep-7 .state-label-amount { fill: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+  .sidebar { width: 360px; margin-left: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+  .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; overflow: hidden; }
+  .card-header { padding: 16px 20px 12px; border-bottom: 1px solid #f1f5f9; }
+  .card-header h3 { font-size: 0.85rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+  .card-body { padding: 16px 20px 20px; }
+
+  .total-amount { font-size: 2rem; font-weight: 800; color: #1e3a5f; }
+  .total-label { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+
+  .selected-states-list { list-style: none; }
+  .selected-states-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+  .selected-states-list li:last-child { border-bottom: none; }
+  .selected-states-list .state-name { font-weight: 600; color: #334155; }
+  .selected-states-list .state-amount { color: #1e3a5f; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .empty-state { color: #94a3b8; font-size: 0.85rem; padding: 8px 0; font-style: italic; }
+
+  .rep-territory { padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  .rep-territory:last-child { border-bottom: none; }
+  .rep-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .rep-name { font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+  .rep-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .rep-total { font-weight: 700; color: #1e3a5f; font-size: 0.95rem; }
+  .rep-states { font-size: 0.8rem; color: #64748b; }
+
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 20px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #64748b; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .click-hint { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 8px; }
+
+  .lake { fill: #bfdbfe; stroke: none; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Midwest Territory Sales Map</h1>
+  <p>Click states to view combined totals &middot; Assign rep territories</p>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Product Category</label>
+    <select id="productFilter">
+      <option value="current">Current Products</option>
+      <option value="allDevices">All Med Devices</option>
+      <option value="allProducts">All Products</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Metric</label>
+    <select id="metricFilter">
+      <option value="annualOpportunity">Annual Opportunity</option>
+      <option value="sitesOfCare">Sites of Care</option>
+      <option value="hcps">HCPs</option>
+      <option value="procedureVolume">Procedure Volume</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Rep Territories</label>
+    <select id="repCount">
+      <option value="0">No Assignment</option>
+      <option value="1">1 Rep</option>
+      <option value="2">2 Reps</option>
+      <option value="3">3 Reps</option>
+      <option value="4">4 Reps</option>
+      <option value="5">5 Reps</option>
+      <option value="6">6 Reps</option>
+      <option value="7">7 Reps</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="btn-clear" onclick="clearSelection()">Clear Selection</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="map-container">
+    <svg class="map-svg" viewBox="-10 -10 900 700" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- Lake Michigan -->
+      <path class="lake" d="
+        M 502,370 L 508,340 L 518,300 L 522,260 L 520,220 L 522,185 L 530,155
+        L 545,138 L 555,130 L 548,128 L 535,142 L 525,165 L 518,195
+        L 515,230 L 510,270 L 505,310 L 500,345 L 495,370 Z" />
+
+      <!-- Lake Superior -->
+      <path class="lake" d="
+        M 275,148 L 300,125 L 330,108 L 365,95 L 400,82 L 430,78 L 460,80
+        L 490,88 L 510,100 L 528,115 L 540,128 L 528,135 L 510,125
+        L 490,112 L 460,102 L 430,98 L 400,100 L 370,110 L 340,122
+        L 310,137 L 285,150 Z" />
+
+      <!-- Lake Erie -->
+      <path class="lake" d="
+        M 640,395 L 665,388 L 700,382 L 740,375 L 775,372 L 810,368
+        L 840,372 L 850,380 L 840,388 L 810,385 L 775,388 L 740,392
+        L 700,396 L 665,400 L 645,402 Z" />
+
+      <!-- Minnesota -->
+      <g id="group-MN" class="state-group" onclick="toggleState('MN')">
+        <path class="state-path" d="
+          M 18,28 L 122,28 L 122,6 L 150,28 L 200,42 L 260,58 L 310,72 L 360,80 L 395,85
+          L 365,110 L 330,125 L 295,138 L 275,148
+          L 258,178 L 248,208 L 252,240 L 262,268 L 278,295 L 295,315 L 318,335
+          L 52,335
+          L 45,300 L 38,260 L 30,210 L 22,155 L 18,100 Z" />
+        <text class="state-label" x="170" y="172">MN</text>
+        <text class="state-label-amount" id="label-MN" x="170" y="198"></text>
+      </g>
+
+      <!-- Wisconsin -->
+      <g id="group-WI" class="state-group" onclick="toggleState('WI')">
+        <path class="state-path" d="
+          M 275,148 L 295,138 L 330,125 L 365,110 L 395,85
+          L 430,78 L 460,80 L 490,88 L 510,100 L 528,115 L 540,128
+          L 535,142 L 528,165 L 522,185 L 520,210 L 518,240
+          L 515,270 L 510,300 L 505,330 L 500,355 L 495,375
+          L 355,375
+          L 342,358 L 330,345 L 318,335
+          L 295,315 L 278,295 L 262,268 L 252,240 L 248,208 L 258,178 Z" />
+        <text class="state-label" x="395" y="238">WI</text>
+        <text class="state-label-amount" id="label-WI" x="395" y="264"></text>
+      </g>
+
+      <!-- Iowa -->
+      <g id="group-IA" class="state-group" onclick="toggleState('IA')">
+        <path class="state-path" d="
+          M 52,335 L 318,335 L 330,345 L 342,358 L 355,375
+          L 365,400 L 368,420 L 362,442 L 352,462 L 340,480 L 325,500 L 312,515
+          L 58,515
+          L 50,498 L 48,475 L 50,455 L 55,432 L 60,410 L 58,388 L 54,365 Z" />
+        <text class="state-label" x="195" y="412">IA</text>
+        <text class="state-label-amount" id="label-IA" x="195" y="438"></text>
+      </g>
+
+      <!-- Michigan (lower peninsula) -->
+      <g id="group-MI" class="state-group" onclick="toggleState('MI')">
+        <path class="state-path" d="
+          M 540,128 L 555,118 L 575,108 L 600,102 L 630,100 L 658,102
+          L 682,110 L 700,125 L 712,145 L 718,168
+          L 720,192 L 715,218 L 708,238
+          L 718,248 L 730,242 L 740,228 L 742,210 L 738,192 L 730,178
+          L 722,168
+          L 718,168
+          L 712,195 L 710,220 L 705,245
+          L 695,268 L 680,288 L 662,305 L 640,320 L 618,332 L 598,345
+          L 578,358 L 562,372 L 550,388 L 542,405
+          L 500,405 L 498,395 L 495,375
+          L 500,355 L 505,330 L 510,300 L 515,270
+          L 518,240 L 520,210 L 522,185 L 528,165 L 535,142 Z" />
+        <text class="state-label" x="620" y="210">MI</text>
+        <text class="state-label-amount" id="label-MI" x="620" y="236"></text>
+      </g>
+
+      <!-- Illinois -->
+      <g id="group-IL" class="state-group" onclick="toggleState('IL')">
+        <path class="state-path" d="
+          M 355,375 L 495,375 L 498,395 L 500,405 L 500,418
+          L 502,445 L 500,475 L 495,502 L 488,528
+          L 478,550 L 465,570 L 448,588 L 428,602 L 408,612 L 392,618
+          L 378,620 L 365,615 L 352,605 L 340,590 L 330,572 L 322,552
+          L 316,530 L 312,515
+          L 325,500 L 340,480 L 352,462 L 362,442 L 368,420 L 365,400 Z" />
+        <text class="state-label" x="418" y="482">IL</text>
+        <text class="state-label-amount" id="label-IL" x="418" y="508"></text>
+      </g>
+
+      <!-- Indiana -->
+      <g id="group-IN" class="state-group" onclick="toggleState('IN')">
+        <path class="state-path" d="
+          M 500,418 L 638,415
+          L 640,445 L 640,478 L 638,508 L 632,535 L 622,558 L 608,578
+          L 590,592 L 568,600 L 545,598
+          L 525,592 L 510,582
+          L 488,600 L 470,610 L 448,618
+          L 428,602 L 448,588 L 465,570 L 478,550 L 488,528
+          L 495,502 L 500,475 L 502,445 Z" />
+        <text class="state-label" x="558" y="498">IN</text>
+        <text class="state-label-amount" id="label-IN" x="558" y="524"></text>
+      </g>
+
+      <!-- Ohio -->
+      <g id="group-OH" class="state-group" onclick="toggleState('OH')">
+        <path class="state-path" d="
+          M 638,415 L 642,405 L 650,398 L 670,390 L 700,384 L 735,378
+          L 768,374 L 800,372 L 830,374 L 852,380
+          L 850,410 L 845,445 L 838,478 L 828,510 L 815,535 L 800,555
+          L 778,568 L 752,575 L 725,578 L 698,578 L 672,572 L 650,562
+          L 632,535 L 638,508 L 640,478 L 640,445 Z" />
+        <text class="state-label" x="748" y="468">OH</text>
+        <text class="state-label-amount" id="label-OH" x="748" y="494"></text>
+      </g>
+
+    </svg>
+    <p class="click-hint">Click on states to select/deselect them</p>
+  </div>
+
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-header"><h3>Selected States</h3></div>
+      <div class="card-body">
+        <div class="total-amount" id="combinedTotal">$0</div>
+        <div class="total-label" id="combinedLabel">No states selected</div>
+        <ul class="selected-states-list" id="selectedList">
+          <li class="empty-state">Click states on the map to see totals</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" id="repCard" style="display:none;">
+      <div class="card-header"><h3>Rep Territories</h3></div>
+      <div class="card-body" id="repList"></div>
+      <div class="legend" id="repLegend"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3 id="grandTotalHeader">All States Total</h3></div>
+      <div class="card-body">
+        <div class="total-amount" id="grandTotal">$0</div>
+        <div class="total-label">Combined 7-state total</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// REAL DATA from territory tables
+// Structure: data[product][metric][state]
+// ============================================================
+const data = {
+  current: {
+    sitesOfCare:     { IL: 182,  IN: 79,   IA: 37,  MI: 123,  MN: 52,   OH: 196,  WI: 80  },
+    hcps:            { IL: 620,  IN: 407,  IA: 116, MI: 614,  MN: 215,  OH: 891,  WI: 341 },
+    procedureVolume: { IL: 26443,IN: 19748,IA: 6898,MI: 25930,MN: 10486,OH: 33938,WI: 15400 },
+    annualOpportunity:{ IL: 15096150, IN: 10381505, IA: 3240970, MI: 14997175, MN: 7912650, OH: 20598582, WI: 8319882 }
+  },
+  allDevices: {
+    sitesOfCare:     { IL: 182,  IN: 80,   IA: 39,  MI: 141,  MN: 54,   OH: 202,  WI: 80  },
+    hcps:            { IL: 620,  IN: 407,  IA: 118, MI: 622,  MN: 215,  OH: 940,  WI: 362 },
+    procedureVolume: { IL: 27290,IN: 20199,IA: 7012,MI: 26573,MN: 10903,OH: 35269,WI: 15967 },
+    annualOpportunity:{ IL: 30132941, IN: 21812152, IA: 7288656, MI: 29896816, MN: 14118032, OH: 40377227, WI: 17295194 }
+  },
+  allProducts: {
+    sitesOfCare:     { IL: 1240, IN: 824,  IA: 327, MI: 1308, MN: 556,  OH: 1103, WI: 473 },
+    hcps:            { IL: 9971, IN: 6534, IA: 1967,MI: 9053, MN: 5139, OH: 8682, WI: 4184 },
+    procedureVolume: { IL: 328178,IN:203865,IA:83347,MI:284418,MN:132525,OH:404236,WI:146852 },
+    annualOpportunity:{ IL:1233684941,IN:756476152,IA:312628656,MI:1061276816,MN:500606032,OH:1516245227,WI:540835194 }
+  }
+};
+
+const metricLabels = {
+  sitesOfCare: 'Sites of Care',
+  hcps: 'HCPs',
+  procedureVolume: 'Procedure Volume',
+  annualOpportunity: 'Annual Opportunity'
+};
+
+const stateNames = {
+  MN: 'Minnesota', WI: 'Wisconsin', IA: 'Iowa', IL: 'Illinois',
+  IN: 'Indiana', MI: 'Michigan', OH: 'Ohio'
+};
+
+const stateOrder = ['IL', 'IN', 'IA', 'MI', 'MN', 'OH', 'WI'];
+const repColors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+
+let selectedStates = new Set();
+let currentProduct = 'current';
+let currentMetric = 'annualOpportunity';
+let currentRepCount = 0;
+
+// Get the active dataset (product + metric)
+function getActiveData() {
+  return data[currentProduct][currentMetric];
+}
+
+// ---------- Formatting ----------
+function fmtShort(val, metric) {
+  if (metric === 'annualOpportunity') {
+    if (val >= 1e9) return '$' + (val / 1e9).toFixed(1) + 'B';
+    if (val >= 1e6) return '$' + (val / 1e6).toFixed(1) + 'M';
+    if (val >= 1e3) return '$' + (val / 1e3).toFixed(0) + 'K';
+    return '$' + val;
+  }
+  if (val >= 1e6) return (val / 1e6).toFixed(1) + 'M';
+  if (val >= 100000) return (val / 1e3).toFixed(0) + 'K';
+  if (val >= 10000) return (val / 1e3).toFixed(1) + 'K';
+  return val.toLocaleString();
+}
+
+function fmtFull(val, metric) {
+  if (metric === 'annualOpportunity') return '$' + val.toLocaleString();
+  return val.toLocaleString();
+}
+
+// ---------- Adjacency graph (contiguous territory constraint) ----------
+// WI-MI are adjacent via the Upper Peninsula
+var adjacency = {
+  MN: ['WI', 'IA'],
+  WI: ['MN', 'IA', 'IL', 'MI'],
+  IA: ['MN', 'WI', 'IL'],
+  IL: ['WI', 'IA', 'IN'],
+  IN: ['IL', 'MI', 'OH'],
+  MI: ['WI', 'IN', 'OH'],
+  OH: ['IN', 'MI']
+};
+
+// Check if a set of states forms a connected subgraph
+function isConnected(stateSet) {
+  if (stateSet.length <= 1) return true;
+  var visited = {};
+  var queue = [stateSet[0]];
+  visited[stateSet[0]] = true;
+  var count = 1;
+  while (queue.length > 0) {
+    var curr = queue.shift();
+    var neighbors = adjacency[curr];
+    for (var i = 0; i < neighbors.length; i++) {
+      var nb = neighbors[i];
+      if (!visited[nb] && stateSet.indexOf(nb) !== -1) {
+        visited[nb] = true;
+        count++;
+        queue.push(nb);
+      }
+    }
+  }
+  return count === stateSet.length;
+}
+
+// ---------- Balanced CONTIGUOUS partition for rep territories ----------
+// Exhaustive search over all assignments (7 states → max 7^7 = 823K, very fast)
+// Finds the partition that minimizes max(group_total) - min(group_total)
+// while requiring every group to be geographically connected.
+function balancedPartition(states, vals, n) {
+  if (n <= 0 || n > states.length) return [];
+  var numStates = states.length;
+
+  // Trivial cases
+  if (n === 1) {
+    var t = 0;
+    for (var i = 0; i < numStates; i++) t += vals[states[i]];
+    return [{ states: states.slice(), total: t }];
+  }
+  if (n === numStates) {
+    return states.map(function(s) { return { states: [s], total: vals[s] }; });
+  }
+
+  var bestAssign = null;
+  var bestScore = Infinity;
+  var totalCombos = Math.pow(n, numStates);
+  var assign = new Array(numStates);
+
+  for (var combo = 0; combo < totalCombos; combo++) {
+    // Decode combo into group assignments
+    var temp = combo;
+    for (var j = numStates - 1; j >= 0; j--) {
+      assign[j] = temp % n;
+      temp = (temp - assign[j]) / n;
+    }
+
+    // Quick check: all groups must be used (non-empty)
+    var groupUsed = new Array(n);
+    for (var g = 0; g < n; g++) groupUsed[g] = false;
+    for (var j = 0; j < numStates; j++) groupUsed[assign[j]] = true;
+    var allUsed = true;
+    for (var g = 0; g < n; g++) { if (!groupUsed[g]) { allUsed = false; break; } }
+    if (!allUsed) continue;
+
+    // Symmetry-break: require that first occurrence of group g
+    // comes before first occurrence of group g+1
+    var firstOccurrence = new Array(n);
+    for (var g = 0; g < n; g++) firstOccurrence[g] = numStates;
+    for (var j = 0; j < numStates; j++) {
+      if (j < firstOccurrence[assign[j]]) firstOccurrence[assign[j]] = j;
+    }
+    var ordered = true;
+    for (var g = 1; g < n; g++) {
+      if (firstOccurrence[g] <= firstOccurrence[g - 1]) { ordered = false; break; }
+    }
+    if (!ordered) continue;
+
+    // Build groups and compute totals
+    var groups = new Array(n);
+    var totals = new Array(n);
+    for (var g = 0; g < n; g++) { groups[g] = []; totals[g] = 0; }
+    for (var j = 0; j < numStates; j++) {
+      groups[assign[j]].push(states[j]);
+      totals[assign[j]] += vals[states[j]];
+    }
+
+    // Score: max - min total
+    var maxT = totals[0], minT = totals[0];
+    for (var g = 1; g < n; g++) {
+      if (totals[g] > maxT) maxT = totals[g];
+      if (totals[g] < minT) minT = totals[g];
+    }
+    var score = maxT - minT;
+    if (score >= bestScore) continue; // prune
+
+    // Check contiguity for each group
+    var contiguous = true;
+    for (var g = 0; g < n; g++) {
+      if (!isConnected(groups[g])) { contiguous = false; break; }
+    }
+    if (!contiguous) continue;
+
+    bestScore = score;
+    bestAssign = assign.slice();
+  }
+
+  // Build result from best assignment
+  if (!bestAssign) {
+    // Fallback: shouldn't happen for our 7-state graph with n <= 7
+    return states.map(function(s) { return { states: [s], total: vals[s] }; });
+  }
+
+  var result = [];
+  for (var g = 0; g < n; g++) {
+    var grp = { states: [], total: 0 };
+    for (var j = 0; j < numStates; j++) {
+      if (bestAssign[j] === g) {
+        grp.states.push(states[j]);
+        grp.total += vals[states[j]];
+      }
+    }
+    result.push(grp);
+  }
+  // Sort groups by total descending for nicer display
+  result.sort(function(a, b) { return b.total - a.total; });
+  return result;
+}
+
+// ---------- Update functions ----------
+function updateLabels() {
+  var vals = getActiveData();
+  for (var i = 0; i < stateOrder.length; i++) {
+    var st = stateOrder[i];
+    document.getElementById('label-' + st).textContent = fmtShort(vals[st], currentMetric);
+  }
+}
+
+function updateSelection() {
+  var vals = getActiveData();
+
+  for (var i = 0; i < stateOrder.length; i++) {
+    var st = stateOrder[i];
+    var group = document.getElementById('group-' + st);
+    if (selectedStates.has(st)) group.classList.add('selected');
+    else group.classList.remove('selected');
+  }
+
+  var listEl = document.getElementById('selectedList');
+  var totalEl = document.getElementById('combinedTotal');
+  var labelEl = document.getElementById('combinedLabel');
+
+  if (selectedStates.size === 0) {
+    listEl.innerHTML = '<li class="empty-state">Click states on the map to see totals</li>';
+    totalEl.textContent = currentMetric === 'annualOpportunity' ? '$0' : '0';
+    labelEl.textContent = 'No states selected';
+  } else {
+    var total = 0;
+    var html = '';
+    for (var i = 0; i < stateOrder.length; i++) {
+      var st = stateOrder[i];
+      if (selectedStates.has(st)) {
+        total += vals[st];
+        html += '<li><span class="state-name">' + stateNames[st] + '</span><span class="state-amount">' + fmtFull(vals[st], currentMetric) + '</span></li>';
+      }
+    }
+    listEl.innerHTML = html;
+    totalEl.textContent = fmtFull(total, currentMetric);
+    labelEl.textContent = selectedStates.size + ' state' + (selectedStates.size > 1 ? 's' : '') + ' selected \u2022 ' + metricLabels[currentMetric];
+  }
+
+  // Grand total
+  var grand = 0;
+  for (var i = 0; i < stateOrder.length; i++) grand += vals[stateOrder[i]];
+  document.getElementById('grandTotal').textContent = fmtFull(grand, currentMetric);
+  document.getElementById('grandTotalHeader').textContent = 'All States \u2022 ' + metricLabels[currentMetric];
+}
+
+function updateReps() {
+  var vals = getActiveData();
+  var repCard = document.getElementById('repCard');
+
+  for (var i = 0; i < stateOrder.length; i++) {
+    var group = document.getElementById('group-' + stateOrder[i]);
+    for (var j = 1; j <= 7; j++) group.classList.remove('rep-' + j);
+  }
+
+  if (currentRepCount === 0) {
+    repCard.style.display = 'none';
+    return;
+  }
+
+  repCard.style.display = '';
+  var groups = balancedPartition(stateOrder, vals, currentRepCount);
+
+  for (var i = 0; i < groups.length; i++) {
+    for (var j = 0; j < groups[i].states.length; j++) {
+      document.getElementById('group-' + groups[i].states[j]).classList.add('rep-' + (i + 1));
+    }
+  }
+
+  var html = '';
+  for (var i = 0; i < groups.length; i++) {
+    var stNames = groups[i].states.map(function(s) { return stateNames[s]; }).join(', ');
+    html += '<div class="rep-territory">' +
+      '<div class="rep-header">' +
+        '<span class="rep-name"><span class="rep-dot" style="background:' + repColors[i] + '"></span>Rep ' + (i + 1) + '</span>' +
+        '<span class="rep-total">' + fmtFull(groups[i].total, currentMetric) + '</span>' +
+      '</div>' +
+      '<div class="rep-states">' + stNames + '</div>' +
+    '</div>';
+  }
+  document.getElementById('repList').innerHTML = html;
+
+  var legend = '';
+  for (var i = 0; i < groups.length; i++) {
+    legend += '<span class="legend-item"><span class="legend-dot" style="background:' + repColors[i] + '"></span>Rep ' + (i + 1) + '</span>';
+  }
+  document.getElementById('repLegend').innerHTML = legend;
+}
+
+function refreshAll() {
+  updateLabels();
+  updateSelection();
+  updateReps();
+}
+
+function toggleState(st) {
+  if (selectedStates.has(st)) selectedStates.delete(st);
+  else selectedStates.add(st);
+  updateSelection();
+}
+
+function clearSelection() {
+  selectedStates.clear();
+  updateSelection();
+}
+
+// ---------- Event listeners ----------
+document.getElementById('productFilter').addEventListener('change', function() {
+  currentProduct = this.value;
+  refreshAll();
+});
+
+document.getElementById('metricFilter').addEventListener('change', function() {
+  currentMetric = this.value;
+  refreshAll();
+});
+
+document.getElementById('repCount').addEventListener('change', function() {
+  currentRepCount = parseInt(this.value);
+  refreshAll();
+});
+
+// ---------- Init ----------
+refreshAll();
+</script>
+</body>
+</html>
