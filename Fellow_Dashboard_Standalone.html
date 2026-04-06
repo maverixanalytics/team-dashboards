@@ -158,6 +158,11 @@
       .btn-cancel:hover { color: #e0e0e0; border-color: rgba(255,255,255,0.3); }
       .save-status { font-size: 11px; color: #4caf50; padding: 4px 0; display: none; }
       .save-status.error { color: #ef5350; }
+.territory-subgroup { margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; }
+.territory-subgroup-header { font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.territory-subgroup-count { background: #e8f0fe; color: #1a73e8; border-radius: 10px; padding: 1px 8px; font-size: 11px; font-weight: 500; }
+.subgroup-icon { font-size: 14px; }
+
 </style>
 </head>
 <body>
@@ -720,31 +725,52 @@ function renderFellowsList(fellows) {
 function renderTerritoriesList(fellows) {
   var territories = {};
   fellows.forEach(function(f) {
-    var key = f.rep || 'Unassigned';
-    if (!territories[key]) territories[key] = { rep: f.rep || 'Unassigned', territory: f.repTerritory || 'TBD', fellows: [] };
-    territories[key].fellows.push(f);
+    var instTerr = f.instTerritory || 'TBD';
+    var destTerr = f.destTerritory || 'TBD';
+    if (!territories[instTerr]) territories[instTerr] = { territory: instTerr, training: [], destination: [], reps: {} };
+    territories[instTerr].training.push(f);
+    if (f.rep) territories[instTerr].reps[f.rep] = true;
+    if (!territories[destTerr]) territories[destTerr] = { territory: destTerr, training: [], destination: [], reps: {} };
+    territories[destTerr].destination.push(f);
   });
-  return Object.values(territories).sort(function(a,b) { return b.fellows.length - a.fellows.length; }).map(function(t) {
-    var withWishlist = t.fellows.filter(function(f) { return f.wishlist; }).length;
-    var placed = t.fellows.filter(function(f) { return f.destination !== "TBD"; }).length;
-    var fellowRows = t.fellows.map(function(f) {
-      return '<div class="territory-fellow-row" onclick="selectFellow('+f.id+')">' +
-        '<span><span class="badge '+(f.type==='IP Fellow'?'badge-ip':'badge-gi')+'" style="font-size:9px;">'+(f.type==='IP Fellow'?'IP':'GI')+'</span> '+f.name+'</span>' +
-        '<span class="dest">'+(f.destination === 'TBD' ? 'TBD' : f.destCity)+'</span>' +
-      '</div>';
-    }).join('');
+  function fellowRow(f, locationLabel) {
+    var badge = f.type==='IP Fellow' ? 'badge-ip' : 'badge-gi';
+    var label = f.type==='IP Fellow' ? 'IP' : 'GI';
+    return '<div class="territory-fellow-row" onclick="selectFellow('+f.id+')">' +
+      '<span><span class="badge '+badge+'" style="font-size:9px;">'+label+'</span> '+f.name+'</span>' +
+      '<span class="dest">'+locationLabel+'</span></div>';
+  }
+  return Object.values(territories).sort(function(a,b) {
+    return (b.training.length + b.destination.length) - (a.training.length + a.destination.length);
+  }).map(function(t) {
+    var allIds = {};
+    t.training.forEach(function(f) { allIds[f.id] = f; });
+    t.destination.forEach(function(f) { allIds[f.id] = f; });
+    var unique = Object.values(allIds);
+    var withWishlist = unique.filter(function(f) { return f.wishlist; }).length;
+    var placed = unique.filter(function(f) { return f.destination !== 'TBD'; }).length;
+    var repNames = Object.keys(t.reps).join(', ') || 'Unassigned';
+    var trainingRows = t.training.map(function(f) { return fellowRow(f, f.instCity || 'TBD'); }).join('');
+    var destFiltered = t.destination.filter(function(f) { return f.destTerritory && f.destTerritory !== 'TBD'; });
+    var destRows = destFiltered.map(function(f) { return fellowRow(f, f.destCity || 'TBD'); }).join('');
+    var trainingSection = t.training.length > 0 ?
+      '<div class="territory-subgroup"><div class="territory-subgroup-header"><span class="subgroup-icon">&#x1F393;</span> Training Here <span class="territory-subgroup-count">'+t.training.length+'</span></div><div class="territory-fellows">'+trainingRows+'</div></div>' : '';
+    var destSection = destFiltered.length > 0 ?
+      '<div class="territory-subgroup"><div class="territory-subgroup-header"><span class="subgroup-icon">&#x1F4CD;</span> Destination Here <span class="territory-subgroup-count">'+destFiltered.length+'</span></div><div class="territory-fellows">'+destRows+'</div></div>' : '';
     return '<div class="territory-card">' +
-      '<div class="rep-name">'+t.rep+'</div>' +
-      '<div class="rep-region">'+t.territory+'</div>' +
+      '<div class="rep-name">'+t.territory+'</div>' +
+      '<div class="rep-region">'+repNames+'</div>' +
       '<div class="territory-stats">' +
-        '<div class="territory-stat"><div class="val">'+t.fellows.length+'</div><div class="lbl">Fellows</div></div>' +
+        '<div class="territory-stat"><div class="val">'+t.training.length+'</div><div class="lbl">Training</div></div>' +
+        '<div class="territory-stat"><div class="val">'+destFiltered.length+'</div><div class="lbl">Destinations</div></div>' +
         '<div class="territory-stat"><div class="val">'+placed+'</div><div class="lbl">Placed</div></div>' +
         '<div class="territory-stat"><div class="val">'+withWishlist+'</div><div class="lbl">Wish Lists</div></div>' +
       '</div>' +
-      '<div class="territory-fellows">'+fellowRows+'</div>' +
+      trainingSection + destSection +
     '</div>';
   }).join('');
 }
+
 
 function renderSidebar() {
   var fellows = getFilteredFellows();
