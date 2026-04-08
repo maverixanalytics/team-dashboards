@@ -183,6 +183,8 @@
 .territory-legend .tl-item:hover { color:#fff; }
 .territory-legend .tl-swatch { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
 .territory-legend .tl-rep { color:#7a8a9e; font-size:10px; }
+    .leaflet-overlay-pane path { transition: fill-opacity 0.15s, stroke-width 0.15s; pointer-events: visiblePainted; }
+    .leaflet-overlay-pane path:hover { fill-opacity: 0.55 !important; stroke-width: 2.5px !important; }
 </style>
 </head>
 <body>
@@ -515,6 +517,7 @@ let statesLayer = null;
 
 fetch(US_STATES_URL).then(r => r.json()).then(geojson => {
   statesLayer = L.geoJSON(geojson, {
+    interactive: false,
     filter: function(feature) { return feature.properties.name !== "Alaska"; },
     style: function(feature) { var tc = getTerritoryColor(feature.properties.name); return { fillColor: tc, fillOpacity: 0.35, color: '#1a2332', weight: 1.5, opacity: 0.8 }; },
     onEachFeature: function(feature, layer) {
@@ -542,7 +545,7 @@ fetch(US_STATES_URL).then(r => r.json()).then(geojson => {
           interactive: false
         }).addTo(map);
       }
-      var ti = getTerritoryInfo(feature.properties.name); layer.bindTooltip('<b>' + ti.territory + '</b><br>' + ti.rep, { className: 'dark-tooltip', sticky: true }); layer.on('mouseover', function() { var tc = getTerritoryColor(feature.properties.name); this.setStyle({ fillOpacity: 0.55, weight: 2.5 }); }); layer.on('mouseout', function() { this.setStyle({ fillOpacity: 0.35, weight: 1.5 }); });
+      var ti = getTerritoryInfo(feature.properties.name); // territory hover disabled for marker clickability
     }
   }).addTo(map);
   statesLayer.bringToBack();
