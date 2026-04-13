@@ -482,12 +482,20 @@ function parseCSVtoFellows(csvText) {
               if (results && results.length > 0) {
                 var lat = parseFloat(results[0].lat);
                 var lng = parseFloat(results[0].lon);
+                var dn = results[0].display_name || '';
+                var dnParts = dn.split(',').map(function(s){return s.trim();});
+                var derivedCity = ''; var derivedSt = '';
+                for (var di = 0; di < dnParts.length; di++) {
+                  if (NAME_TO_ABBR[dnParts[di]]) { derivedSt = NAME_TO_ABBR[dnParts[di]]; if (di >= 2) derivedCity = dnParts[di-2]; break; }
+                }
                 if (item.field === 'inst') {
                   item.fellow.instLat = lat;
                   item.fellow.instLng = lng;
+                  if (!item.fellow.instCity && derivedSt) { item.fellow.instCity = (derivedCity ? derivedCity + ', ' : '') + derivedSt; }
                 } else {
                   item.fellow.destLat = lat;
                   item.fellow.destLng = lng;
+                  if ((!item.fellow.destCity || item.fellow.destCity === 'TBD') && derivedSt) { item.fellow.destCity = (derivedCity ? derivedCity + ', ' : '') + derivedSt; }
                 }
                 console.log('Geocoded ' + item.query + ': ' + lat + ', ' + lng);
               } else {
@@ -526,7 +534,7 @@ function loadData() {
       assignTerritories();
       renderSidebar();
       // Geocode fellows missing coordinates, then refresh map
-      geocodeFellows(FELLOWS).then(function() { renderMap(getFilteredFellows()); });
+      geocodeFellows(FELLOWS).then(function() { assignTerritories(); renderSidebar(); renderMap(getFilteredFellows()); });
     })
     .catch(function(err) {
       document.getElementById('sidebar-content').innerHTML =
