@@ -399,7 +399,7 @@ function assignTerritories() {
         FELLOWS.forEach(function(f) {
           var instState = extractState(f.instCity);
           if (instState && TERRITORIES[instState]) {
-            f.instTerritory = TERRITORIES[instState].territory;
+            f.instTerritory = STATE_TERRITORY_MAP[instState] || TERRITORIES[instState].territory;
             if (!f.rep && TERRITORIES[instState].rep) {
               f.rep = TERRITORIES[instState].rep;
               f.repTerritory = TERRITORIES[instState].territory;
@@ -407,7 +407,7 @@ function assignTerritories() {
           }
           var destState = extractState(f.destCity);
           if (destState && TERRITORIES[destState]) {
-            f.destTerritory = TERRITORIES[destState].territory;
+            f.destTerritory = STATE_TERRITORY_MAP[destState] || TERRITORIES[destState].territory;
           }
           if (!f.instTerritory && f.rep) { for (var tN in TERRITORY_INFO) { var tR = TERRITORY_INFO[tN].rep; if (tR && f.rep.toLowerCase().indexOf(tR.toLowerCase()) !== -1) { f.instTerritory = tN; break; } } }
         });
