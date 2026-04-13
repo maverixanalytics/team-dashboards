@@ -1185,23 +1185,14 @@ fetch(US_STATES_URL).then(r => r.json()).then(geojson => {
   }).addTo(map);
   statesLayer.bringToBack();
 
-  // Sub-state territory polygon overlays
-  var _ss={weight:0,opacity:0};
-  // CA NorCal (teal)
-  L.polygon([[42.0,-124.4],[42.0,-120.0],[39.0,-120.0],[38.5,-119.5],[37.5,-118.0],[36.5,-117.5],[35.8,-117.0],[35.8,-124.4]],Object.assign({fillColor:"#26A69A",fillOpacity:0.35},_ss)).addTo(map);
-  // CA SoCal (coral)
-  L.polygon([[35.8,-124.4],[35.8,-117.0],[35.0,-116.0],[34.5,-114.6],[34.0,-114.3],[33.3,-114.5],[32.7,-114.7],[32.5,-117.1],[33.0,-117.6],[33.5,-118.1],[34.0,-118.6],[34.5,-120.5],[35.4,-121.2],[35.8,-124.4]],Object.assign({fillColor:"#FF8A65",fillOpacity:0.35},_ss)).addTo(map);
-  // TX Dallas/North (amber)
-  L.polygon([[36.5,-103.1],[36.5,-100.0],[34.5,-100.0],[33.8,-94.0],[31.2,-94.0],[32.0,-97.5],[32.0,-103.1],[36.5,-103.1]],Object.assign({fillColor:"#FFB74D",fillOpacity:0.35},_ss)).addTo(map);
-  // TX Houston/South (purple)
-  L.polygon([[32.0,-103.1],[32.0,-97.5],[31.2,-94.0],[30.0,-94.0],[29.3,-94.7],[28.5,-96.0],[27.5,-97.2],[26.0,-97.2],[26.5,-98.5],[28.0,-100.0],[29.5,-101.5],[31.0,-104.0],[32.0,-106.6],[32.0,-103.1]],Object.assign({fillColor:"#B39DDB",fillOpacity:0.35},_ss)).addTo(map);
-  // PA West/Steel Mountains (gray)
-  L.polygon([[42.3,-80.6],[42.3,-77.5],[39.7,-77.5],[39.7,-80.6],[42.3,-80.6]],Object.assign({fillColor:"#90A4AE",fillOpacity:0.35},_ss)).addTo(map);
-  // PA East/Philadelphia (green)
-  L.polygon([[42.3,-77.5],[42.3,-74.8],[40.0,-74.8],[39.7,-75.5],[39.7,-77.5],[42.3,-77.5]],Object.assign({fillColor:"#A5D6A7",fillOpacity:0.35},_ss)).addTo(map);
+  // Sub-state territory overlays (clipped from GeoJSON boundaries)
+  function _clipLat(ring,lat,above){var r=[];for(var i=0;i<ring.length;i++){var c=ring[i],n=ring[(i+1)%ring.length];var ci=above?c[1]>=lat:c[1]<=lat;var ni=above?n[1]>=lat:n[1]<=lat;if(ci)r.push([c[1],c[0]]);if(ci!==ni){var t=(lat-c[1])/(n[1]-c[1]);r.push([lat,c[0]+t*(n[0]-c[0])]);}}return r;}
+  function _clipLng(ring,lng,right){var r=[];for(var i=0;i<ring.length;i++){var c=ring[i],n=ring[(i+1)%ring.length];var ci=right?c[0]>=lng:c[0]<=lng;var ni=right?n[0]>=lng:n[0]<=lng;if(ci)r.push([c[1],c[0]]);if(ci!==ni){var t=(lng-c[0])/(n[0]-c[0]);r.push([c[1]+t*(n[1]-c[1]),lng]);}}return r;}
+  var _splitCfg={"California":{axis:"lat",val:35.8,c:["#26A69A","#FF8A65"]},"Texas":{axis:"lat",val:32.0,c:["#FFB74D","#B39DDB"]},"Pennsylvania":{axis:"lng",val:-77.5,c:["#90A4AE","#A5D6A7"]}};
+  geojson.features.forEach(function(f){var cfg=_splitCfg[f.properties.name];if(!cfg)return;var polys=f.geometry.type==="MultiPolygon"?f.geometry.coordinates:[f.geometry.coordinates];polys.forEach(function(poly){var ring=poly[0];var a,b;if(cfg.axis==="lat"){a=_clipLat(ring,cfg.val,true);b=_clipLat(ring,cfg.val,false);}else{a=_clipLng(ring,cfg.val,false);b=_clipLng(ring,cfg.val,true);}if(a.length>2)L.polygon(a,{fillColor:cfg.c[0],fillOpacity:0.35,weight:0,opacity:0,interactive:false}).addTo(map);if(b.length>2)L.polygon(b,{fillColor:cfg.c[1],fillOpacity:0.35,weight:0,opacity:0,interactive:false}).addTo(map);});});
   // Territory dividing lines
-  L.polyline([[35.8,-124.4],[35.8,-117.0]],{color:"#1a2332",weight:2,opacity:0.8,dashArray:"6,4"}).addTo(map);
-  L.polyline([[31.2,-94.0],[32.0,-97.5],[32.0,-103.1]],{color:"#1a2332",weight:2,opacity:0.8,dashArray:"6,4"}).addTo(map);
+  L.polyline([[35.8,-124.4],[35.8,-114.0]],{color:"#1a2332",weight:2,opacity:0.8,dashArray:"6,4"}).addTo(map);
+  L.polyline([[32.0,-106.6],[32.0,-93.5]],{color:"#1a2332",weight:2,opacity:0.8,dashArray:"6,4"}).addTo(map);
   L.polyline([[42.0,-77.5],[39.7,-77.5]],{color:"#1a2332",weight:2,opacity:0.8,dashArray:"6,4"}).addTo(map);
 }).catch(() => {});
 
