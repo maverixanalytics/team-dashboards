@@ -331,7 +331,7 @@ let FELLOWS = [];
         "LA":{territory:"Central",rep:""},"TX":{territory:"Central",rep:""},
         "MT":{territory:"Mountain",rep:""},"WY":{territory:"Mountain",rep:""},
         "CO":{territory:"Mountain",rep:""},"NM":{territory:"Mountain",rep:""},
-        "ID":{territory:"Mountain",rep:""},"UT":{territory:"Mountain",rep:""},
+        "ID":{territory:"Mountain",rep:""},"UT":{territory:"Phoenix",rep:""},
         "AZ":{territory:"Mountain",rep:""},"NV":{territory:"Mountain",rep:""},
         "WA":{territory:"West",rep:""},"OR":{territory:"West",rep:""},
         "CA":{territory:"West",rep:""},"HI":{territory:"West",rep:""}
@@ -472,7 +472,8 @@ function parseCSVtoFellows(csvText) {
         chain = chain.then(function() {
           if (idx > 0) return new Promise(function(r) { setTimeout(r, 1100); });
         }).then(function() {
-          var q = encodeURIComponent(item.query + ' hospital USA');
+          var cleanName = item.query.replace(/\s+(CIE|GME|CME|IME|ACGME|IM|FM|GI|Residency|Fellowship|Program|Department|Dept)$/i, '').trim();
+           var q = encodeURIComponent(cleanName + ' hospital USA');
           var url = 'https://nominatim.openstreetmap.org/search?q=' + q + '&format=json&limit=1&countrycodes=us';
           return fetch(url, { headers: { 'User-Agent': 'FellowPipelineDashboard/1.0' } })
             .then(function(r) { return r.json(); })
@@ -523,6 +524,8 @@ function loadData() {
       dataLoaded = true;
       assignTerritories();
       renderSidebar();
+      // Geocode fellows missing coordinates, then refresh map
+      geocodeFellows(FELLOWS).then(function() { renderMap(getFilteredFellows()); });
     })
     .catch(function(err) {
       document.getElementById('sidebar-content').innerHTML =
@@ -563,8 +566,8 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
 // ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Load US states GeoJSON ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
 const US_STATES_URL = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
 
-var STATE_TERRITORY_MAP = {"AL":"Southeast","AR":"Southeast","AZ":"Phoenix","CA":"SoCal","CO":"Phoenix","CT":"Boston","DC":"Philadelphia","DE":"Philadelphia","FL":"Florida","GA":"Southeast","HI":"West","IA":"Chicago","ID":"West","IL":"Chicago","IN":"Chicago","KS":"Dallas","KY":"Southeast","LA":"Houston","MA":"Boston","MD":"Philadelphia","ME":"Boston","MI":"Chicago","MN":"Chicago","MO":"Dallas","MS":"Southeast","MT":"Southeast","NC":"Southeast","ND":"Chicago","NE":"Dallas","NH":"Boston","NJ":"NYC","NM":"Phoenix","NV":"Phoenix","NY":"Long Island","OH":"Ohio","OK":"Dallas","OR":"West","PA":"Philadelphia","PR":"Long Island","RI":"Boston","SC":"Southeast","SD":"Chicago","TN":"Southeast","TX":"Houston","UT":"West","VA":"Philadelphia","VT":"Boston","WA":"West","WI":"Chicago","WV":"Steel Mountains","WY":"West"};
-var TERRITORY_INFO = {"Boston":{rep:"Tim",color:"#F48FB1"},"Chicago":{rep:"Chris",color:"#E8D568"},"Dallas":{rep:"Taylor",color:"#8BC48A"},"Florida":{rep:"Mark",color:"#4DD0C4"},"Houston":{rep:"Curtis",color:"#B39DDB"},"Long Island":{rep:"Meredith",color:"#9FA8DA"},"NYC":{rep:"Caroline",color:"#7986CB"},"Ohio":{rep:"James",color:"#D4A76A"},"Philadelphia":{rep:"Karey",color:"#A5D6A7"},"Phoenix":{rep:"Rebecca",color:"#E8956A"},"SoCal":{rep:"Allie",color:"#7BA7CC"},"Southeast":{rep:"TJ",color:"#81C784"},"Steel Mountains":{rep:"Matt B.",color:"#90A4AE"},"West":{rep:"Matt E.",color:"#5B8DB8"}};
+var STATE_TERRITORY_MAP = {"AL":"Southeast","AR":"Southeast","AZ":"Phoenix","CA":"SoCal","CO":"Phoenix","CT":"Boston","DC":"Philadelphia","DE":"Philadelphia","FL":"Florida","GA":"Southeast","HI":"West","IA":"Chicago","ID":"West","IL":"Chicago","IN":"Chicago","KS":"Dallas","KY":"Southeast","LA":"Houston","MA":"Boston","MD":"Philadelphia","ME":"Boston","MI":"Chicago","MN":"Chicago","MO":"Dallas","MS":"Southeast","MT":"Southeast","NC":"Southeast","ND":"Chicago","NE":"Dallas","NH":"Boston","NJ":"NYC","NM":"Phoenix","NV":"Phoenix","NY":"Long Island","OH":"Ohio","OK":"Dallas","OR":"West","PA":"Philadelphia","PR":"Long Island","RI":"Boston","SC":"Southeast","SD":"Chicago","TN":"Southeast","TX":"Houston","UT":"Phoenix","VA":"Philadelphia","VT":"Boston","WA":"West","WI":"Chicago","WV":"Steel Mountains","WY":"West"};
+var TERRITORY_INFO = {"Boston":{rep:"Tim",color:"#F48FB1"},"Chicago":{rep:"Chris",color:"#E8D568"},"Dallas":{rep:"Taylor",color:"#FFB74D"},"Florida":{rep:"Mark",color:"#4DD0C4"},"Houston":{rep:"Curtis",color:"#B39DDB"},"Long Island":{rep:"Meredith",color:"#9FA8DA"},"NYC":{rep:"Caroline",color:"#7986CB"},"Ohio":{rep:"James",color:"#D4A76A"},"Philadelphia":{rep:"Karey",color:"#A5D6A7"},"Phoenix":{rep:"Rebecca",color:"#E8956A"},"NorCal":{rep:"",color:"#26A69A"},"SoCal":{rep:"Allie",color:"#FF8A65"},"Southeast":{rep:"TJ",color:"#81C784"},"Steel Mountains":{rep:"Matt B.",color:"#90A4AE"},"West":{rep:"Matt E.",color:"#5B8DB8"}};
 var NAME_TO_ABBR = {"Alabama":"AL","Arizona":"AZ","Arkansas":"AR","California":"CA","Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA","Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD","Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO","Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY","District of Columbia":"DC","Puerto Rico":"PR"};
 var INSTITUTION_TERRITORY_MAP = {
 '':'Chicago',
@@ -1181,6 +1184,12 @@ fetch(US_STATES_URL).then(r => r.json()).then(geojson => {
     }
   }).addTo(map);
   statesLayer.bringToBack();
+
+  // Territory dividing lines within split states
+  // CA NorCal/SoCal divide (approx along 35.8N latitude)
+  L.polyline([[35.8, -124.4], [35.8, -117.8]], {color: "#1a2332", weight: 2, opacity: 0.8, dashArray: "6,4"}).addTo(map);
+  // TX Dallas/Houston divide (approx along 31.2N latitude)
+  L.polyline([[33.6, -94.0], [31.2, -97.5], [31.2, -103.1]], {color: "#1a2332", weight: 2, opacity: 0.8, dashArray: "6,4"}).addTo(map);
 }).catch(() => {});
 
 const svgLayer = L.svg().addTo(map);
