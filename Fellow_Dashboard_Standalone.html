@@ -452,6 +452,52 @@ function parseCSVtoFellows(csvText) {
   }).map(function(f) { if (f.status === "Contacted") f.status = "Introduction Made"; return f; }).filter(function(f) { return f.name; }); // Skip empty rows
 }
 
+
+    // Geocode fellows with missing coordinates using OpenStreetMap Nominatim
+    function geocodeFellows(fellows) {
+      var toGeocode = [];
+      fellows.forEach(function(f) {
+        if (f.institution && (!f.instLat || !f.instLng)) {
+          toGeocode.push({ fellow: f, field: 'inst', query: f.institution });
+        }
+        if (f.destination && (!f.destLat || !f.destLng)) {
+          toGeocode.push({ fellow: f, field: 'dest', query: f.destination });
+        }
+      });
+      if (toGeocode.length === 0) return Promise.resolve(fellows);
+
+      // Geocode sequentially with 1s delay to respect Nominatim rate limits
+      var chain = Promise.resolve();
+      toGeocode.forEach(function(item, idx) {
+        chain = chain.then(function() {
+          if (idx > 0) return new Promise(function(r) { setTimeout(r, 1100); });
+        }).then(function() {
+          var q = encodeURIComponent(item.query + ' hospital USA');
+          var url = 'https://nominatim.openstreetmap.org/search?q=' + q + '&format=json&limit=1&countrycodes=us';
+          return fetch(url, { headers: { 'User-Agent': 'FellowPipelineDashboard/1.0' } })
+            .then(function(r) { return r.json(); })
+            .then(function(results) {
+              if (results && results.length > 0) {
+                var lat = parseFloat(results[0].lat);
+                var lng = parseFloat(results[0].lon);
+                if (item.field === 'inst') {
+                  item.fellow.instLat = lat;
+                  item.fellow.instLng = lng;
+                } else {
+                  item.fellow.destLat = lat;
+                  item.fellow.destLng = lng;
+                }
+                console.log('Geocoded ' + item.query + ': ' + lat + ', ' + lng);
+              } else {
+                console.warn('Could not geocode: ' + item.query);
+              }
+            })
+            .catch(function(e) { console.warn('Geocode error for ' + item.query + ': ' + e.message); });
+        });
+      });
+      return chain.then(function() { return fellows; });
+    }
+
 function loadData() {
   document.getElementById('sidebar-content').innerHTML =
     '<div style="text-align:center;padding:40px 20px;color:#7a8a9e;">' +
