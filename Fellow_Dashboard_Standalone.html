@@ -417,40 +417,77 @@ let dataLoaded = false;
 
 function parseCSVtoFellows(csvText) {
   var result = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-  if (!result.data || result.data.length === 0) return [];
+  if (!result.data || !result.data.length) return [];
 
-  var headers = result.meta.fields;
+  // Header-name lookup (resilient to column order changes in the form-linked sheet).
+  var allHeaders = Object.keys(result.data[0]);
+  var findHeader = function(substr) {
+    for (var hi = 0; hi < allHeaders.length; hi++) {
+      if (allHeaders[hi].indexOf(substr) >= 0) return allHeaders[hi];
+    }
+    return null;
+  };
+  var H = {
+    rep:           findHeader('Your Name'),
+    name:          findHeader('Full Name'),
+    type:          findHeader('Subspecialty'),
+    email:         findHeader('Email'),
+    phone:         findHeader('Phone'),
+    linkedin:      findHeader('LinkedIn'),
+    institution:   findHeader('Training Institution'),
+    progDirector:  findHeader('Program Director'),
+    completion:    findHeader('Expected Completion'),
+    destination:   findHeader('Destination Hospital'),
+    destCity:      findHeader('Destination City'),
+    practiceType:  findHeader('Practice Type'),
+    wishlist:      findHeader('Equipment Wish List'),
+    decisionMaker: findHeader('Decision Maker'),
+    status:        findHeader('Status'),
+    repTerritory:  findHeader('Rep Territory'),
+    destLat:       findHeader('Dest Latitude'),
+    destLng:       findHeader('Dest Longitude'),
+    instLat:       findHeader('Inst Latitude'),
+    instLng:       findHeader('Inst Longitude'),
+    notes:         findHeader('Rep Notes'),
+    instTerritory: findHeader('Inst Territory'),
+    instRep:       findHeader('Inst Rep'),
+    destTerritory: findHeader('Dest Territory'),
+    destRep:       findHeader('Dest Rep')
+  };
+
   return result.data.map(function(row, i) {
-    var instName = (row[headers[7]] || '').toString().toLowerCase().trim(); // Col H = Training Institution
-    var instCoords = INSTITUTION_COORDS[instName] || {};
-
+    var instCoords = (typeof INSTITUTION_COORDS !== 'undefined' && row[H.institution] && INSTITUTION_COORDS[row[H.institution]]) || {};
     return {
       id: i + 1,
-      name: row[headers[2]] || '',           // C: Fellow's Full Name
-      type: row[headers[3]] || '',           // D: Subspecialty
-      email: row[headers[4]] || '',          // E: Fellow's Email
-      phone: row[headers[5]] || '',          // F: Fellow's Phone
-      linkedin: row[headers[6]] || '',       // G: Fellow's LinkedIn URL
-      institution: row[headers[7]] || '',    // H: Training Institution
+      name: row[H.name] || '',
+      type: row[H.type] || '',
+      email: row[H.email] || '',
+      phone: row[H.phone] || '',
+      linkedin: row[H.linkedin] || '',
+      institution: row[H.institution] || '',
       instCity: '',
-      instLat: parseFloat(row[headers[20]]) || instCoords.lat || null,  // U: Inst Latitude
-      instLng: parseFloat(row[headers[21]]) || instCoords.lng || null,  // V: Inst Longitude
-      progDirector: row[headers[8]] || '',   // I: Program Director
-      completion: row[headers[9]] || '',     // J: Expected Completion Date
-      destination: row[headers[10]] || 'TBD', // K: Destination Hospital
-      destCity: row[headers[11]] || 'TBD',   // L: Destination City, State
-      destLat: parseFloat(row[headers[18]]) || null,  // S: Dest Latitude
-      destLng: parseFloat(row[headers[19]]) || null,  // T: Dest Longitude
-      practiceType: row[headers[12]] || 'TBD', // M: Practice Type
-      wishlist: row[headers[13]] || '',      // N: Equipment Wish List
-      decisionMaker: row[headers[14]] || '', // O: Key Decision Maker(s)
-      status: row[headers[16]] || 'Not Started', // Q: Status
-      rep: row[headers[1]] || '',            // B: Your Name (Rep)
-      repTerritory: row[headers[17]] || '',  // R: Rep Territory
-      notes: row[headers[22]] || '',         // W: Rep Notes
-      rowNumber: i + 2,                      // For writing back (row 1 = header)
+      instLat: parseFloat(row[H.instLat]) || instCoords.lat || null,
+      instLng: parseFloat(row[H.instLng]) || instCoords.lng || null,
+      progDirector: row[H.progDirector] || '',
+      completion: row[H.completion] || '',
+      destination: row[H.destination] || 'TBD',
+      destCity: row[H.destCity] || 'TBD',
+      destLat: parseFloat(row[H.destLat]) || null,
+      destLng: parseFloat(row[H.destLng]) || null,
+      practiceType: row[H.practiceType] || 'TBD',
+      wishlist: row[H.wishlist] || '',
+      decisionMaker: row[H.decisionMaker] || '',
+      status: row[H.status] || 'Not Started',
+      rep: row[H.rep] || '',
+      repTerritory: row[H.repTerritory] || '',
+      notes: row[H.notes] || '',
+      instTerritory: row[H.instTerritory] || '',
+      instRep: row[H.instRep] || '',
+      destTerritory: row[H.destTerritory] || '',
+      destRep: row[H.destRep] || '',
+      rowNumber: i + 2
     };
-  }).map(function(f) { if (f.status === "Contacted") f.status = "Introduction Made"; return f; }).filter(function(f) { return f.name; }); // Skip empty rows
+  }).filter(function(f) { return f.name; });
 }
 
 
