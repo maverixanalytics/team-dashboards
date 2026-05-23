@@ -457,7 +457,7 @@ function parseCSVtoFellows(csvText) {
 
   return result.data.map(function(row, i) {
     var instCoords = (typeof INSTITUTION_COORDS !== 'undefined' && row[H.institution] && INSTITUTION_COORDS[row[H.institution]]) || {};
-    return {
+    var __f = {
       id: i + 1,
       name: row[H.name] || '',
       type: row[H.type] || '',
@@ -487,6 +487,10 @@ function parseCSVtoFellows(csvText) {
       destRep: row[H.destRep] || '',
       rowNumber: i + 2
     };
+    if (/AUTO-IMPORT/i.test(__f.rep || '')) { __f.rep = __f.instRep || ''; __f.repTerritory = __f.instTerritory || ''; }
+    if (!__f.rep && __f.instRep) { __f.rep = __f.instRep; }
+    if (!__f.repTerritory && __f.instTerritory) { __f.repTerritory = __f.instTerritory; }
+    return __f;
   }).filter(function(f) { return f.name; });
 }
 
