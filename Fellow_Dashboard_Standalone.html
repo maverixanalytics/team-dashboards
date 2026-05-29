@@ -412,6 +412,8 @@ function assignTerritories() {
             if (TERRITORY_INFO[f.destTerritory] && (!f.destRep || /AUTO-IMPORT/i.test(f.destRep))) { f.destRep = TERRITORY_INFO[f.destTerritory].rep; }
           }
           if (!f.instTerritory && f.rep) { for (var tN in TERRITORY_INFO) { var tR = TERRITORY_INFO[tN].rep; if (tR && f.rep.toLowerCase().indexOf(tR.toLowerCase()) !== -1) { f.instTerritory = tN; break; } } }
+          if (TERRITORY_INFO[f.instTerritory] && (!f.instRep || /AUTO-IMPORT/i.test(f.instRep))) { f.instRep = TERRITORY_INFO[f.instTerritory].rep; }
+          if (TERRITORY_INFO[f.destTerritory] && (!f.destRep || /AUTO-IMPORT/i.test(f.destRep))) { f.destRep = TERRITORY_INFO[f.destTerritory].rep; }
         });
       }
 
