@@ -1903,6 +1903,58 @@ if (legendEl) {
 ;(function(){
   if(window.__INST_FALLBACK_WRAP) return; window.__INST_FALLBACK_WRAP=true;
   if(typeof parseCSVtoFellows!=='function' || typeof Papa==='undefined') return;
+  var SITE_COORDS={
+    "Baylor University Medical Center":[32.7881111,-96.7787039],
+    "Beth Israel Deaconess Medical Center/ Massachusetts General Hospital":[42.338459,-71.10945],
+    "Chicago Chest Center/ The University of Illinois Chicago":[41.8705691,-87.671946],
+    "Cleveland Clinic Foundation":[41.5035186,-81.6156815],
+    "Cooper Medical School of Rowan University/Cooper University Hospital":[39.94141,-75.1147053],
+    "Dartmouth-Hitchcock/Mary Hitchcock Memorial Hospital":[43.6821257,-72.2727086],
+    "Duke University Hospital":[36.0070213,-78.9373479],
+    "Emory University School of Medicine":[33.7911992,-84.3203777],
+    "Henry Ford Health/Henry Ford Hospital":[42.3690924,-83.0853912],
+    "Icahn School of Medicine at Mount Sinai/Mount Sinai Hospital":[40.7899645,-73.9532282],
+    "Johns Hopkins University":[39.2964392,-76.5923927],
+    "Lahey Hospital and Medical Center":[42.4846439,-71.2042249],
+    "LSU Health Shreveport":[32.4805963,-93.7608949],
+    "Mayo Clinic College of Medicine and Science (Jacksonville)":[30.2651818,-81.4417145],
+    "Mayo Clinic College of Medicine and Science (Rochester)":[44.0225389,-92.4666075],
+    "Medical College of Georgia at Augusta University":[33.4694103,-81.9884196],
+    "Medical University of South Carolina":[32.7841774,-79.9479198],
+    "Memorial Sloan-Kettering Cancer Center":[40.7644418,-73.9569549],
+    "Montefiore Medical Center/Albert Einstein College of Medicine (Moses and Weiler Campuses)":[40.8799369,-73.8781831],
+    "NYU Grossman School of Medicine":[40.9205588,-73.8088292],
+    "Northwestern University / McGaw Medical Center":[41.8945542,-87.6231829],
+    "Ohio State University Hospital":[39.9954231,-83.0131089],
+    "Penn State Milton S Hershey Medical Center":[40.2637095,-76.6748222],
+    "Rush University Medical Center":[41.874339,-87.665346],
+    "Stanford University School of Medicine":[37.4326782,-122.1765951],
+    "University of Alabama at Birmingham":[33.5091102,-86.8071923],
+    "University of Arkansas for Medical Sciences (UAMS) College of Medicine":[34.7480711,-92.3213812],
+    "University of California, Los Angeles":[34.0664088,-118.4420276],
+    "University of California, San Diego":[32.7553116,-117.1655247],
+    "University of California, San Francisco / Palo Alto Medical Foundation":[37.76307,-122.4574027],
+    "University of Chicago":[41.7882101,-87.6044182],
+    "University of Cincinnati Medical Center/College of Medicine":[39.139569,-84.5041837],
+    "University of Colorado, Anschutz Medical Campus":[39.745114,-104.8406552],
+    "University of Florida":[29.6322713,-82.3619053],
+    "University of Kentucky":[38.0334865,-84.5081562],
+    "University of Maryland":[39.2864855,-76.6225403],
+    "University of Michigan Irene R. Joseph Interventional Pulmonology Fellowship":[42.2821095,-83.7273205],
+    "University of Minnesota":[44.9719889,-93.2328953],
+    "University of North Carolina Hospitals":[35.9041644,-79.0516724],
+    "University of Pennsylvania Health System":[39.9499481,-75.1941014],
+    "University of South Florida, Morsani College of Medicine":[28.0547258,-82.4261806],
+    "University of Southern California/Los Angeles General Medical Center (USC/LA General) Keck School of Medicine":[34.0627257,-118.2018882],
+    "University of Texas M.D. Anderson Cancer Center":[29.7076703,-95.3978436],
+    "University of Texas Southwestern Medical Center":[32.8088642,-96.8383153],
+    "University of Utah School of Medicine":[40.7687099,-111.8353151],
+    "University of Wisconsin Hospitals and Clinics":[43.0763751,-89.4320049],
+    "Vanderbilt University Medical Center":[36.143992,-86.799966],
+    "Virginia Commonwealth University Health System":[37.5405951,-77.4304654],
+    "Washington University School of Medicine":[38.6361,-90.2641],
+    "Yale-New Haven Medical Center":[41.3050334,-72.9339913]
+  };
   var _parse=parseCSVtoFellows;
   parseCSVtoFellows=function(csvText){
     var fellows=_parse(csvText);
@@ -1915,16 +1967,20 @@ if (legendEl) {
         if(!fsKey && kk.indexOf('Fellowship Site')===0) fsKey=kk;
         if(kk.indexOf('If you selected')===0){ if(kk.indexOf('site name')>=0) onKey=kk; else if(kk.indexOf('city')>=0) ocKey=kk; }
       }
-      if(!nmKey) return fellows;
       var byName={};
-      rows.forEach(function(r){var n=((r[nmKey]||'')+'').trim(); if(n) byName[n]={fs:fsKey?((r[fsKey]||'')+'').trim():'',on:onKey?((r[onKey]||'')+'').trim():'',oc:ocKey?((r[ocKey]||'')+'').trim():''};});
+      if(nmKey) rows.forEach(function(r){var n=((r[nmKey]||'')+'').trim(); if(n) byName[n]={fs:fsKey?((r[fsKey]||'')+'').trim():'',on:onKey?((r[onKey]||'')+'').trim():'',oc:ocKey?((r[ocKey]||'')+'').trim():''};});
       fellows.forEach(function(f){
-        if(f.institution && (''+f.institution).trim()) return;
-        var m=byName[((f.name||'')+'').trim()]; if(!m) return;
-        var inst='',dir='';
-        if(m.fs && m.fs.indexOf('Other (not listed)')<0){ var s=m.fs.indexOf(' \u2014 '); if(s<0)s=m.fs.indexOf(' - '); inst=(s>=0?m.fs.slice(0,s):m.fs).trim(); if(s>=0)dir=m.fs.slice(s+3).trim(); }
-        else if(m.on){ inst=m.on; if(m.oc && !(f.instCity&&(''+f.instCity).trim())) f.instCity=m.oc; }
-        if(inst){ f.institution=inst; if(dir && !(f.progDirector&&(''+f.progDirector).trim())) f.progDirector=dir; }
+        if(!(f.institution && (''+f.institution).trim())){
+          var m=byName[((f.name||'')+'').trim()];
+          if(m){ var inst='',dir='';
+            if(m.fs && m.fs.indexOf('Other (not listed)')<0){ var s=m.fs.indexOf(' \u2014 '); if(s<0)s=m.fs.indexOf(' - '); inst=(s>=0?m.fs.slice(0,s):m.fs).trim(); if(s>=0)dir=m.fs.slice(s+3).trim(); }
+            else if(m.on){ inst=m.on; if(m.oc && !(f.instCity&&(''+f.instCity).trim())) f.instCity=m.oc; }
+            if(inst){ f.institution=inst; if(dir && !(f.progDirector&&(''+f.progDirector).trim())) f.progDirector=dir; }
+          }
+        }
+        if((f.instLat==null || f.instLat==='' || isNaN(parseFloat(f.instLat))) && f.institution && SITE_COORDS[(''+f.institution).trim()]){
+          var c=SITE_COORDS[(''+f.institution).trim()]; f.instLat=c[0]; f.instLng=c[1];
+        }
       });
     }catch(e){}
     return fellows;
