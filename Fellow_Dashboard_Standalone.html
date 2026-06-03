@@ -345,7 +345,7 @@ let FELLOWS = [];
       }
 
       // Apps Script Web App URL Ã¢ÂÂ replace with your deployed URL
-      var APPS_SCRIPT_URL = "";
+      var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxiCFIqQCp1DKiEQTwDwleazVre9ZF42C8Q9CxNFhoRBsZGLMxS1Q3RDNERhs0UEj0/exec";
 
       // Save fellow updates to Google Sheet via Apps Script
       function saveFellowUpdate(fellowId, updates) {
@@ -1862,6 +1862,40 @@ if (legendEl) {
   setInterval(refreshAI, 60000);
 })();
 
+</script>
+
+<!-- ==== Field write-back instant-update patch (added 2026-06-03) ==== -->
+<script>
+;(function(){
+  if (window.__FIELD_SAVE_PATCH) return; window.__FIELD_SAVE_PATCH = true;
+  function byId(id){ for (var i=0;i<FELLOWS.length;i++){ if (FELLOWS[i].id===id) return FELLOWS[i]; } return null; }
+  function val(id){ var el=document.getElementById(id); return el ? el.value : undefined; }
+  function rerender(){ try{ if(typeof renderSidebar==='function') renderSidebar(); }catch(e){} try{ if(typeof updateKPIs==='function') updateKPIs(); }catch(e){} }
+  if (typeof handleSaveClick === 'function') {
+    var _hs = handleSaveClick;
+    handleSaveClick = function(){
+      var pre = { id:(typeof activeCardId!=='undefined'?activeCardId:null), dest:val('edit-destination'), destCity:val('edit-destCity'), status:val('edit-status'), pt:val('edit-practiceType') };
+      var r = _hs.apply(this, arguments);
+      try {
+        var f = (pre.id != null) ? byId(pre.id) : null;
+        if (f) {
+          var destChanged = false;
+          if (pre.dest !== undefined && pre.dest !== f.destination) { f.destination = pre.dest; destChanged = true; }
+          if (pre.destCity !== undefined && pre.destCity !== f.destCity) { f.destCity = pre.destCity; destChanged = true; }
+          if (pre.status !== undefined && pre.status !== '') f.status = pre.status;
+          if (pre.pt !== undefined && pre.pt !== '') f.practiceType = pre.pt;
+          if (destChanged) { f.destLat = null; f.destLng = null; }
+          rerender();
+          try { if (typeof selectFellow === 'function') selectFellow(pre.id); } catch(e){}
+          if (destChanged && typeof geocodeFellows === 'function') {
+            try { Promise.resolve(geocodeFellows([f])).then(function(){ rerender(); try{ if(typeof selectFellow==='function' && typeof activeCardId!=='undefined' && activeCardId===pre.id) selectFellow(pre.id); }catch(e){} }).catch(function(){}); } catch(e){}
+          }
+        }
+      } catch (e) {}
+      return r;
+    };
+  }
+})();
 </script>
 </body>
 </html>
