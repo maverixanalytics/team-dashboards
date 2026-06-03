@@ -438,8 +438,8 @@ function parseCSVtoFellows(csvText) {
     email:         findHeader('Email'),
     phone:         findHeader('Phone'),
     linkedin:      findHeader('LinkedIn'),
-    institution: (function(fh){var h=fh('Training Institution');if(h&&(''+h).trim())return h;var d=fh('Fellowship Site');if(d&&(''+d).trim()&&(''+d).indexOf('Other (not listed)')<0){var s=(''+d).indexOf(' \u2014 ');if(s<0)s=(''+d).indexOf(' - ');return (s>=0?(''+d).slice(0,s):(''+d)).trim();}var o=fh('Fellowship site name');if(o&&(''+o).trim())return (''+o).trim();return h;})(findHeader),
-    progDirector: (function(fh){var p=fh('Program Director');if(p&&(''+p).trim())return p;var d=fh('Fellowship Site');if(d){var s=(''+d).indexOf(' \u2014 ');if(s<0)s=(''+d).indexOf(' - ');if(s>=0)return (''+d).slice(s+3).trim();}return p;})(findHeader),
+    institution: findHeader('Training Institution'),
+    progDirector: findHeader('Program Director'),
     completion:    findHeader('Expected Completion'),
     destination:   findHeader('Destination Hospital'),
     destCity:      findHeader('Destination City'),
@@ -1895,6 +1895,41 @@ if (legendEl) {
       return r;
     };
   }
+})();
+</script>
+
+<!-- ==== Institution fallback from Fellowship Site dropdown (added 2026-06-03) ==== -->
+<script>
+;(function(){
+  if(window.__INST_FALLBACK_WRAP) return; window.__INST_FALLBACK_WRAP=true;
+  if(typeof parseCSVtoFellows!=='function' || typeof Papa==='undefined') return;
+  var _parse=parseCSVtoFellows;
+  parseCSVtoFellows=function(csvText){
+    var fellows=_parse(csvText);
+    try{
+      var result=Papa.parse(csvText,{header:true,skipEmptyLines:true});
+      var rows=result.data||[]; var keys=Object.keys(rows[0]||{});
+      var nmKey=null,fsKey=null,onKey=null,ocKey=null;
+      for(var i=0;i<keys.length;i++){var kk=keys[i];
+        if(!nmKey && kk.indexOf('Full Name')>=0) nmKey=kk;
+        if(!fsKey && kk.indexOf('Fellowship Site')===0) fsKey=kk;
+        if(kk.indexOf('If you selected')===0){ if(kk.indexOf('site name')>=0) onKey=kk; else if(kk.indexOf('city')>=0) ocKey=kk; }
+      }
+      if(!nmKey) return fellows;
+      var byName={};
+      rows.forEach(function(r){var n=((r[nmKey]||'')+'').trim(); if(n) byName[n]={fs:fsKey?((r[fsKey]||'')+'').trim():'',on:onKey?((r[onKey]||'')+'').trim():'',oc:ocKey?((r[ocKey]||'')+'').trim():''};});
+      fellows.forEach(function(f){
+        if(f.institution && (''+f.institution).trim()) return;
+        var m=byName[((f.name||'')+'').trim()]; if(!m) return;
+        var inst='',dir='';
+        if(m.fs && m.fs.indexOf('Other (not listed)')<0){ var s=m.fs.indexOf(' \u2014 '); if(s<0)s=m.fs.indexOf(' - '); inst=(s>=0?m.fs.slice(0,s):m.fs).trim(); if(s>=0)dir=m.fs.slice(s+3).trim(); }
+        else if(m.on){ inst=m.on; if(m.oc && !(f.instCity&&(''+f.instCity).trim())) f.instCity=m.oc; }
+        if(inst){ f.institution=inst; if(dir && !(f.progDirector&&(''+f.progDirector).trim())) f.progDirector=dir; }
+      });
+    }catch(e){}
+    return fellows;
+  };
+  setTimeout(function(){ try{ if(typeof loadData==='function') loadData(); }catch(e){} }, 1500);
 })();
 </script>
 </body>
