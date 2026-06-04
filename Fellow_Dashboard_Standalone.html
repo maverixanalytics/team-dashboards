@@ -1729,25 +1729,23 @@ if (legendEl) {
   </div>
 </div>
 
-<!-- ==== AI Research Suggestion Box (added 2026-06-03) ==== -->
+<!-- ==== AI Research Suggestion Box (added 2026-06-03; localStorage persistence) ==== -->
 <script>
-
 ;(function(){
   if (window.__AI_SUGGEST_INSTALLED) return;
   window.__AI_SUGGEST_INSTALLED = true;
-
   var AI_RE = /auto-?import/i;
   var CONFIRM_TAG = '[AI-CONFIRMED]';
   var DISCARD_TAG = '[AI-DISCARDED]';
   var aiNames = Object.create(null);
   var lastSelected = null;
   var loadedSig = null;
-
-  function today(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+  function lsKey(f){ return 'aiDecision::' + (((f&&f.name)||'')+'').trim(); }
+  function lsGet(f){ try{ return localStorage.getItem(lsKey(f))||''; }catch(e){ return ''; } }
+  function lsSet(f,v){ try{ localStorage.setItem(lsKey(f), v); }catch(e){} }
   function byId(id){ for(var i=0;i<FELLOWS.length;i++){ if(FELLOWS[i].id===id) return FELLOWS[i]; } return null; }
   function isAI(f){ return !!(f && aiNames[(f.name||'').trim()]); }
-  function decisionOf(f){ var n=(f&&f.notes)||''; if(n.indexOf(DISCARD_TAG)>=0) return 'discarded'; if(n.indexOf(CONFIRM_TAG)>=0) return 'confirmed'; return null; }
-
+  function decisionOf(f){ var ls=lsGet(f); if(ls==='discarded') return 'discarded'; if(ls==='confirmed') return 'confirmed'; var n=(f&&f.notes)||''; if(n.indexOf(DISCARD_TAG)>=0) return 'discarded'; if(n.indexOf(CONFIRM_TAG)>=0) return 'confirmed'; return null; }
   function injectCSS(){
     if(document.getElementById('ai-suggest-css')) return;
     var st=document.createElement('style'); st.id='ai-suggest-css';
@@ -1767,13 +1765,6 @@ if (legendEl) {
     ].join('');
     (document.head||document.documentElement).appendChild(st);
   }
-
-  function postNote(rowNumber, noteText){
-    if(window.__AI_DRYRUN){ try{console.log('[DRYRUN] postNote', rowNumber, JSON.stringify(noteText));}catch(e){} return Promise.resolve(); }
-    return fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({rowNumber:rowNumber, noteText:noteText})});
-  }
-  function appendTag(notes, tag){ notes=notes||''; var sep=(notes.trim()?'\n':''); return notes+sep+tag+' '+today(); }
-
   function makeBox(f, variant){
     var box=document.createElement('div');
     box.className='ai-suggest-box'+(variant==='detail'?' detail':'');
@@ -1788,25 +1779,14 @@ if (legendEl) {
     db.addEventListener('click', function(e){ e.stopPropagation(); act(f.id,'discard',box); });
     return box;
   }
-
   function removeBoxes(id){ var n=document.querySelectorAll('.ai-suggest-box[data-ai-id="'+id+'"]'); for(var i=0;i<n.length;i++) n[i].parentNode && n[i].parentNode.removeChild(n[i]); }
-
   function rerender(){ try{ if(typeof renderSidebar==='function') renderSidebar(); }catch(e){} try{ if(typeof updateKPIs==='function') updateKPIs(); }catch(e){} }
-
   function act(id, kind, boxEl){
     var f=byId(id); if(!f || decisionOf(f)) return;
-    var btns=boxEl.querySelectorAll('button'); for(var i=0;i<btns.length;i++) btns[i].disabled=true;
-    var msg=document.createElement('div'); msg.className='ai-suggest-msg'; msg.textContent='Saving…'; boxEl.appendChild(msg);
-    var tag=(kind==='confirm')?CONFIRM_TAG:DISCARD_TAG;
-    var newNotes=appendTag(f.notes, tag);
-    function done(){
-      f.notes=newNotes;
-      if(kind==='confirm'){ removeBoxes(id); }
-      else { var p=document.getElementById('info-panel'); if(p && p.classList.contains('visible')){ try{ if(typeof closeInfoPanel==='function') closeInfoPanel(); else p.classList.remove('visible'); }catch(e){ p.classList.remove('visible'); } } rerender(); }
-    }
-    postNote(f.rowNumber, newNotes).then(done, function(err){ try{console.warn('AI note write failed (applying locally):', err);}catch(e){} done(); });
+    lsSet(f, kind==='confirm'?'confirmed':'discarded');
+    if(kind==='confirm'){ removeBoxes(id); rerender(); }
+    else { var p=document.getElementById('info-panel'); if(p && p.classList.contains('visible')){ try{ if(typeof closeInfoPanel==='function') closeInfoPanel(); else p.classList.remove('visible'); }catch(e){ p.classList.remove('visible'); } } rerender(); }
   }
-
   function injectSidebar(){
     injectCSS();
     var cards=document.querySelectorAll('.fellow-card');
@@ -1820,7 +1800,6 @@ if (legendEl) {
       card.appendChild(makeBox(f,'card'));
     }
   }
-
   function injectDetail(){
     injectCSS();
     var panel=document.getElementById('info-panel'); if(!panel || !panel.classList.contains('visible')) return;
@@ -1832,20 +1811,9 @@ if (legendEl) {
     if(header && header.parentNode){ header.parentNode.insertBefore(box, header.nextSibling); }
     else { panel.insertBefore(box, panel.firstChild); }
   }
-
-  if(typeof getFilteredFellows==='function'){
-    var _gff=getFilteredFellows;
-    getFilteredFellows=function(){ var a=_gff.apply(this,arguments); if(!Array.isArray(a)) return a; return a.filter(function(f){ return decisionOf(f)!=='discarded'; }); };
-  }
-  if(typeof renderSidebar==='function'){
-    var _rs=renderSidebar;
-    renderSidebar=function(){ var r=_rs.apply(this,arguments); try{ injectSidebar(); }catch(e){} return r; };
-  }
-  if(typeof selectFellow==='function'){
-    var _sf=selectFellow;
-    selectFellow=function(id){ var r=_sf.apply(this,arguments); lastSelected=id; try{ injectDetail(); }catch(e){} return r; };
-  }
-
+  if(typeof getFilteredFellows==='function'){ var _gff=getFilteredFellows; getFilteredFellows=function(){ var a=_gff.apply(this,arguments); if(!Array.isArray(a)) return a; return a.filter(function(f){ return decisionOf(f)!=='discarded'; }); }; }
+  if(typeof renderSidebar==='function'){ var _rs=renderSidebar; renderSidebar=function(){ var r=_rs.apply(this,arguments); try{ injectSidebar(); }catch(e){} return r; }; }
+  if(typeof selectFellow==='function'){ var _sf=selectFellow; selectFellow=function(id){ var r=_sf.apply(this,arguments); lastSelected=id; try{ injectDetail(); }catch(e){} return r; }; }
   function refreshAI(){
     try{
       return fetch(CSV_URL).then(function(r){return r.text();}).then(function(txt){
@@ -1861,7 +1829,6 @@ if (legendEl) {
   refreshAI();
   setInterval(refreshAI, 60000);
 })();
-
 </script>
 
 <!-- ==== Field write-back instant-update patch (added 2026-06-03) ==== -->
@@ -1986,6 +1953,27 @@ if (legendEl) {
     return fellows;
   };
   setTimeout(function(){ try{ if(typeof loadData==='function') loadData(); }catch(e){} }, 1500);
+})();
+</script>
+
+<!-- ==== Destination coordinate guard (added 2026-06-03) ==== -->
+<script>
+;(function(){
+  if(window.__DEST_GUARD) return; window.__DEST_GUARD=true;
+  if(typeof parseCSVtoFellows!=='function') return;
+  var _p=parseCSVtoFellows;
+  parseCSVtoFellows=function(csvText){
+    var fellows=_p(csvText);
+    try{
+      fellows.forEach(function(f){
+        var d=(''+(f.destination||'')).trim();
+        var la=parseFloat(f.destLat), ln=parseFloat(f.destLng);
+        var bad = !d || /^tbd$/i.test(d) || !isFinite(la) || !isFinite(ln) || la< -85 || la>85 || ln< -180 || ln>180;
+        if(bad){ f.destLat=null; f.destLng=null; }
+      });
+    }catch(e){}
+    return fellows;
+  };
 })();
 </script>
 </body>
