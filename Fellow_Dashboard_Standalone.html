@@ -1979,15 +1979,15 @@ if (legendEl) {
 })();
 </script>
 
-<!-- ==== Territory follows assigned rep (added 2026-06-04) ==== -->
+<!-- ==== Territory: institution follows rep, destination by geography (added 2026-06-04) ==== -->
 <script>
 ;(function(){
   if(window.__TERR_BY_REP) return; window.__TERR_BY_REP=true;
   if(typeof assignTerritories!=='function') return;
-  var SITE_STATE={
-    "Baylor University Medical Center":"TX","Beth Israel Deaconess Medical Center/ Massachusetts General Hospital":"MA","Chicago Chest Center/ The University of Illinois Chicago":"IL","Cleveland Clinic Foundation":"OH","Cooper Medical School of Rowan University/Cooper University Hospital":"NJ","Dartmouth-Hitchcock/Mary Hitchcock Memorial Hospital":"NH","Duke University Hospital":"NC","Emory University School of Medicine":"GA","Henry Ford Health/Henry Ford Hospital":"MI","Icahn School of Medicine at Mount Sinai/Mount Sinai Hospital":"NY","Johns Hopkins University":"MD","Lahey Hospital and Medical Center":"MA","LSU Health Shreveport":"LA","Mayo Clinic College of Medicine and Science (Jacksonville)":"FL","Mayo Clinic College of Medicine and Science (Rochester)":"MN","Medical College of Georgia at Augusta University":"GA","Medical University of South Carolina":"SC","Memorial Sloan-Kettering Cancer Center":"NY","Montefiore Medical Center/Albert Einstein College of Medicine (Moses and Weiler Campuses)":"NY","NYU Grossman School of Medicine":"NY","Northwestern University / McGaw Medical Center":"IL","Ohio State University Hospital":"OH","Penn State Milton S Hershey Medical Center":"PA","Rush University Medical Center":"IL","Stanford University School of Medicine":"CA","University of Alabama at Birmingham":"AL","University of Arkansas for Medical Sciences (UAMS) College of Medicine":"AR","University of California, Los Angeles":"CA","University of California, San Diego":"CA","University of California, San Francisco / Palo Alto Medical Foundation":"CA","University of Chicago":"IL","University of Cincinnati Medical Center/College of Medicine":"OH","University of Colorado, Anschutz Medical Campus":"CO","University of Florida":"FL","University of Kentucky":"KY","University of Maryland":"MD","University of Michigan Irene R. Joseph Interventional Pulmonology Fellowship":"MI","University of Minnesota":"MN","University of North Carolina Hospitals":"NC","University of Pennsylvania Health System":"PA","University of South Florida, Morsani College of Medicine":"FL","University of Southern California/Los Angeles General Medical Center (USC/LA General) Keck School of Medicine":"CA","University of Texas M.D. Anderson Cancer Center":"TX","University of Texas Southwestern Medical Center":"TX","University of Utah School of Medicine":"UT","University of Wisconsin Hospitals and Clinics":"WI","Vanderbilt University Medical Center":"TN","Virginia Commonwealth University Health System":"VA","Washington University School of Medicine":"MO","Yale-New Haven Medical Center":"CT"
-  };
+  var REP_TERR={"tim welch":"Boston","chris oleson":"Chicago","taylor hunter":"Dallas","mark cardona":"Florida","curtis zeleskey":"Houston","meredith hassett":"Long Island","caroline farley":"NYC","karey gill":"Philadelphia","tj dunham":"Southeast","matthew elkins":"West","matt elkins":"West","matt e.":"West","matt e":"West","james mortimore":"Ohio","allie wheeler":"SoCal"};
+  var SITE_STATE={"Baylor University Medical Center":"TX","Beth Israel Deaconess Medical Center/ Massachusetts General Hospital":"MA","Chicago Chest Center/ The University of Illinois Chicago":"IL","Cleveland Clinic Foundation":"OH","Cooper Medical School of Rowan University/Cooper University Hospital":"NJ","Dartmouth-Hitchcock/Mary Hitchcock Memorial Hospital":"NH","Duke University Hospital":"NC","Emory University School of Medicine":"GA","Henry Ford Health/Henry Ford Hospital":"MI","Icahn School of Medicine at Mount Sinai/Mount Sinai Hospital":"NY","Johns Hopkins University":"MD","Lahey Hospital and Medical Center":"MA","LSU Health Shreveport":"LA","Mayo Clinic College of Medicine and Science (Jacksonville)":"FL","Mayo Clinic College of Medicine and Science (Rochester)":"MN","Medical College of Georgia at Augusta University":"GA","Medical University of South Carolina":"SC","Memorial Sloan-Kettering Cancer Center":"NY","Montefiore Medical Center/Albert Einstein College of Medicine (Moses and Weiler Campuses)":"NY","NYU Grossman School of Medicine":"NY","Northwestern University / McGaw Medical Center":"IL","Ohio State University Hospital":"OH","Penn State Milton S Hershey Medical Center":"PA","Rush University Medical Center":"IL","Stanford University School of Medicine":"CA","University of Alabama at Birmingham":"AL","University of Arkansas for Medical Sciences (UAMS) College of Medicine":"AR","University of California, Los Angeles":"CA","University of California, San Diego":"CA","University of California, San Francisco / Palo Alto Medical Foundation":"CA","University of Chicago":"IL","University of Cincinnati Medical Center/College of Medicine":"OH","University of Colorado, Anschutz Medical Campus":"CO","University of Florida":"FL","University of Kentucky":"KY","University of Maryland":"MD","University of Michigan Irene R. Joseph Interventional Pulmonology Fellowship":"MI","University of Minnesota":"MN","University of North Carolina Hospitals":"NC","University of Pennsylvania Health System":"PA","University of South Florida, Morsani College of Medicine":"FL","University of Southern California/Los Angeles General Medical Center (USC/LA General) Keck School of Medicine":"CA","University of Texas M.D. Anderson Cancer Center":"TX","University of Texas Southwestern Medical Center":"TX","University of Utah School of Medicine":"UT","University of Wisconsin Hospitals and Clinics":"WI","Vanderbilt University Medical Center":"TN","Virginia Commonwealth University Health System":"VA","Washington University School of Medicine":"MO","Yale-New Haven Medical Center":"CT"};
   var NORCAL=['san francisco','oakland','san jose','sacramento','berkeley','palo alto','stanford','santa clara','mountain view','redwood city','daly city','hayward','fremont','sunnyvale','santa rosa','stockton','modesto','napa','san mateo','walnut creek','davis','san rafael'];
+  function norm(s){ return (''+(s||'')).toLowerCase().replace(/\s+/g,' ').trim(); }
   function geoTerr(state, lat, lng, city){
     if(!state) return '';
     lat=parseFloat(lat); lng=parseFloat(lng); var c=(''+(city||'')).toLowerCase();
@@ -2004,14 +2004,12 @@ if (legendEl) {
       if(typeof FELLOWS==='undefined') return r;
       var TI=(typeof TERRITORY_INFO!=='undefined')?TERRITORY_INFO:{};
       FELLOWS.forEach(function(f){
-        var iState=SITE_STATE[(''+(f.institution||'')).trim()] || est(f.instCity);
-        var it=geoTerr(iState, f.instLat, f.instLng, f.instCity);
+        var it = REP_TERR[norm(f.rep)] || geoTerr(SITE_STATE[(''+(f.institution||'')).trim()]||est(f.instCity), f.instLat,f.instLng,f.instCity) || '';
         if(it) f.instTerritory=it;
         var d=(''+(f.destination||'')).trim();
         if(d && !/^tbd$/i.test(d)){
-          var dState=est(f.destCity);
-          var dt=geoTerr(dState, f.destLat, f.destLng, f.destCity);
-          if(dt){ f.destTerritory=dt; if(TI[dt] && (''+TI[dt].rep).trim()) f.destRep=TI[dt].rep; }
+          var dg=geoTerr(est(f.destCity), f.destLat,f.destLng,f.destCity);
+          if(dg){ f.destTerritory=dg; if(TI[dg] && (''+TI[dg].rep).trim()) f.destRep=TI[dg].rep; }
         }
       });
     }catch(e){}
