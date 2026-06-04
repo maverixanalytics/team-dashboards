@@ -1967,9 +1967,11 @@ if (legendEl) {
     try{
       fellows.forEach(function(f){
         var d=(''+(f.destination||'')).trim();
+        var noDest = !d || /^tbd$/i.test(d);
         var la=parseFloat(f.destLat), ln=parseFloat(f.destLng);
-        var bad = !d || /^tbd$/i.test(d) || !isFinite(la) || !isFinite(ln) || la< -85 || la>85 || ln< -180 || ln>180;
-        if(bad){ f.destLat=null; f.destLng=null; }
+        var badCoords = !isFinite(la) || !isFinite(ln) || la< -85 || la>85 || ln< -180 || ln>180;
+        if(noDest || badCoords){ f.destLat=null; f.destLng=null; }
+        if(noDest){ f.destTerritory=''; f.destRep=''; if(/^tbd$/i.test((''+(f.destCity||'')).trim())) f.destCity=''; }
       });
     }catch(e){}
     return fellows;
