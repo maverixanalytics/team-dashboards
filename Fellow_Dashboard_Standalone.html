@@ -1469,7 +1469,7 @@ function renderTerritoriesList(fellows) {
     var needsIntro = unique.filter(function(f) { return f.status === 'Not Started'; }).length;
     var placed = unique.filter(function(f) { return f.destination !== 'TBD'; }).length;
     var repNames = Object.keys(t.reps).join(', ') || (TERRITORY_INFO[t.territory]&&TERRITORY_INFO[t.territory].rep)||'Unassigned';
-    var trainingRows = t.training.map(function(f) { return fellowRow(f, f.instCity || 'TBD'); }).join('');
+    var trainingRows = t.training.map(function(f) { return fellowRow(f, f.destCity || f.destination || 'TBD'); }).join('');
     var destFiltered = t.destination.filter(function(f) { return f.destTerritory && f.destTerritory !== 'TBD'; });
     var destRows = destFiltered.map(function(f) { return fellowRow(f, f.destCity || 'TBD'); }).join('');
     var trainingSection = t.training.length > 0 ?
@@ -2019,5 +2019,18 @@ if (legendEl) {
   };
 })();
 </script>
-</body>
+
+<!-- ==== Geocode coordinate cache (stabilize pins/arcs across refreshes) ==== -->
+<script>
+;(function(){
+  if(window.__GEO_CACHE) return; window.__GEO_CACHE=true;
+  var cache={};
+  function key(f){ return (((f&&f.name)||'')+'').trim(); }
+  function num(v){ var x=parseFloat(v); return isFinite(x)?x:null; }
+  function store(){ try{ if(typeof FELLOWS==='undefined')return; FELLOWS.forEach(function(f){ var k=key(f); if(!k)return; var c=cache[k]||(cache[k]={}); if(num(f.instLat)!=null&&num(f.instLng)!=null){c.iLat=num(f.instLat);c.iLng=num(f.instLng);} if(num(f.destLat)!=null&&num(f.destLng)!=null){c.dLat=num(f.destLat);c.dLng=num(f.destLng);} }); }catch(e){} }
+  function restore(){ try{ if(typeof FELLOWS==='undefined')return; FELLOWS.forEach(function(f){ var c=cache[key(f)]; if(!c)return; if(num(f.instLat)==null&&c.iLat!=null){f.instLat=c.iLat;f.instLng=c.iLng;} if(num(f.destLat)==null&&c.dLat!=null){f.destLat=c.dLat;f.destLng=c.dLng;} }); }catch(e){} }
+  if(typeof geocodeFellows==='function'){ var _g=geocodeFellows; geocodeFellows=function(){ var r=_g.apply(this,arguments); try{ Promise.resolve(r).then(store).catch(function(){}); }catch(e){} store(); return r; }; }
+  if(typeof renderSidebar==='function'){ var _rs=renderSidebar; renderSidebar=function(){ restore(); var x=_rs.apply(this,arguments); store(); return x; }; }
+})();
+</script></body>
 </html>
