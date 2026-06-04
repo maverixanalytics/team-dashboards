@@ -1977,79 +1977,27 @@ if (legendEl) {
 })();
 </script>
 
-<!-- ==== Territory geo-fill for known fellowship sites (added 2026-06-04) ==== -->
+<!-- ==== Territory follows assigned rep (added 2026-06-04) ==== -->
 <script>
 ;(function(){
-  if(window.__TERR_GEOFILL) return; window.__TERR_GEOFILL=true;
+  if(window.__TERR_BY_REP) return; window.__TERR_BY_REP=true;
   if(typeof assignTerritories!=='function') return;
-  var SITE_STATE={
-    "Baylor University Medical Center":"TX",
-    "Beth Israel Deaconess Medical Center/ Massachusetts General Hospital":"MA",
-    "Chicago Chest Center/ The University of Illinois Chicago":"IL",
-    "Cleveland Clinic Foundation":"OH",
-    "Cooper Medical School of Rowan University/Cooper University Hospital":"NJ",
-    "Dartmouth-Hitchcock/Mary Hitchcock Memorial Hospital":"NH",
-    "Duke University Hospital":"NC",
-    "Emory University School of Medicine":"GA",
-    "Henry Ford Health/Henry Ford Hospital":"MI",
-    "Icahn School of Medicine at Mount Sinai/Mount Sinai Hospital":"NY",
-    "Johns Hopkins University":"MD",
-    "Lahey Hospital and Medical Center":"MA",
-    "LSU Health Shreveport":"LA",
-    "Mayo Clinic College of Medicine and Science (Jacksonville)":"FL",
-    "Mayo Clinic College of Medicine and Science (Rochester)":"MN",
-    "Medical College of Georgia at Augusta University":"GA",
-    "Medical University of South Carolina":"SC",
-    "Memorial Sloan-Kettering Cancer Center":"NY",
-    "Montefiore Medical Center/Albert Einstein College of Medicine (Moses and Weiler Campuses)":"NY",
-    "NYU Grossman School of Medicine":"NY",
-    "Northwestern University / McGaw Medical Center":"IL",
-    "Ohio State University Hospital":"OH",
-    "Penn State Milton S Hershey Medical Center":"PA",
-    "Rush University Medical Center":"IL",
-    "Stanford University School of Medicine":"CA",
-    "University of Alabama at Birmingham":"AL",
-    "University of Arkansas for Medical Sciences (UAMS) College of Medicine":"AR",
-    "University of California, Los Angeles":"CA",
-    "University of California, San Diego":"CA",
-    "University of California, San Francisco / Palo Alto Medical Foundation":"CA",
-    "University of Chicago":"IL",
-    "University of Cincinnati Medical Center/College of Medicine":"OH",
-    "University of Colorado, Anschutz Medical Campus":"CO",
-    "University of Florida":"FL",
-    "University of Kentucky":"KY",
-    "University of Maryland":"MD",
-    "University of Michigan Irene R. Joseph Interventional Pulmonology Fellowship":"MI",
-    "University of Minnesota":"MN",
-    "University of North Carolina Hospitals":"NC",
-    "University of Pennsylvania Health System":"PA",
-    "University of South Florida, Morsani College of Medicine":"FL",
-    "University of Southern California/Los Angeles General Medical Center (USC/LA General) Keck School of Medicine":"CA",
-    "University of Texas M.D. Anderson Cancer Center":"TX",
-    "University of Texas Southwestern Medical Center":"TX",
-    "University of Utah School of Medicine":"UT",
-    "University of Wisconsin Hospitals and Clinics":"WI",
-    "Vanderbilt University Medical Center":"TN",
-    "Virginia Commonwealth University Health System":"VA",
-    "Washington University School of Medicine":"MO",
-    "Yale-New Haven Medical Center":"CT"
-  };
-  function geoTerr(st, lat, lng){
-    if(st==='CA') return (isFinite(lat)&&lat>=35.8)?'NorCal':'SoCal';
-    if(st==='TX') return (isFinite(lat)&&lat>=32.0)?'Dallas':'Houston';
-    if(st==='PA') return (isFinite(lng)&&lng<=-77.5)?'Steel Mountains':'Philadelphia';
-    return (typeof STATE_TERRITORY_MAP!=='undefined' && STATE_TERRITORY_MAP[st]) || '';
-  }
+  function norm(s){ return (''+(s||'')).toLowerCase().replace(/[.,]/g,'').trim(); }
+  function last(s){ var p=norm(s).split(/\s+/); return p[p.length-1]||''; }
   var _at=assignTerritories;
   assignTerritories=function(){
     var r=_at.apply(this,arguments);
     try{
-      if(typeof FELLOWS!=='undefined') FELLOWS.forEach(function(f){
-        if(f.instTerritory && (''+f.instTerritory).trim()) return;
-        var st=SITE_STATE[(''+(f.institution||'')).trim()];
-        if(!st) return;
-        var t=geoTerr(st, parseFloat(f.instLat), parseFloat(f.instLng));
-        if(t) f.instTerritory=t;
+      if(typeof FELLOWS==='undefined') return r;
+      var full={}, lst={};
+      FELLOWS.forEach(function(f){
+        var t=(''+(f.instTerritory||'')).trim(), rp=(''+(f.rep||'')).trim();
+        if(t && rp){ if(!full[norm(rp)]) full[norm(rp)]=t; var ln=last(rp); if(ln && !lst[ln]) lst[ln]=t; }
+      });
+      FELLOWS.forEach(function(f){
+        var rp=(''+(f.rep||'')).trim(); if(!rp) return;
+        var want = full[norm(rp)] || lst[last(rp)] || '';
+        if(want) f.instTerritory=want;
       });
     }catch(e){}
     return r;
